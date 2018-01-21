@@ -3,6 +3,7 @@ pragma solidity ^0.4.17;
 import 'zeppelin-solidity/contracts/token/StandardToken.sol';
 
 contract TheMineToken is StandardToken {
+    // Token metadata
     string public constant name = 'TheMineToken';
     string public constant symbol = 'MINE';
     uint8 public constant decimals = 18;
@@ -15,7 +16,7 @@ contract TheMineToken is StandardToken {
     uint256 public constant TOKEN_MIN = 1 * dec_multiplier;                    // 1 MINE token
     uint256 public constant TOKENS_PRESALE = 2 * (10**5) * dec_multiplier;     // 200 000 tokens
 
-    // Discount multipliers
+    // Bonus multipliers
     uint256 public constant TOKEN_FIRST_BONUS_MULTIPLIER  = 110;    // 10% bonus
     uint256 public constant TOKEN_SECOND_BONUS_MULTIPLIER = 105;    // 5% bonus
     uint256 public constant TOKEN_THIRD_BONUS_MULTIPLIER  = 100;    // 0% bonus
@@ -292,11 +293,12 @@ contract TheMineToken is StandardToken {
         return super.transferFrom(_from, _to, _value);
     }
 
-
+    // Token contract constructor
     function TheMineToken(
         address _admin1,
         address _admin2,
         address _admin3,
+        address _kycValidator,
         uint256 _fundingStartBlock,
         address _presaleAccount)
     public
@@ -314,9 +316,17 @@ contract TheMineToken is StandardToken {
         // Presale account must be properly defined
         require(_presaleAccount != address(0));
 
+        // kycValidator must be set and be different from the admins
+        require (_kycValidator != address(0));
+        require (_kycValidator != _admin1);
+        require (_kycValidator != _admin2);
+        require (_kycValidator != _admin3);
+
+        // Set the addresses
         admin1 = _admin1;
         admin2 = _admin2;
         admin2 = _admin3;
+        kycValidator = _kycValidator;
 
         // Init contract state
         state = ContractState.Fundraising;
@@ -509,7 +519,7 @@ contract TheMineToken is StandardToken {
         msg.sender.transfer(ethVal);
     }
 
-    /// @dev Allows to transfer ether from the contract as soon as the minimum is reached
+    /// Allows to transfer ether from the contract as soon as the minimum is reached
     function retrieveEth(uint256 _value, address _safe)
     external
     minimumReached
@@ -525,7 +535,7 @@ contract TheMineToken is StandardToken {
         _safe.transfer(_value);
     }
 
-    /// @dev Ends the fundraising period and sends the ETH to wherever the admins agree upon
+    /// Ends the fundraising period and sends the ETH to wherever the admins agree upon
     function finalize(address _safe)
     external
     isFundraising
@@ -546,7 +556,7 @@ contract TheMineToken is StandardToken {
         _safe.transfer(allReceivedEth);
     }
 
-    // @dev Deliver tokens to be distributed to team members
+    // Deliver tokens to be distributed to team members
     function deliverTeamTokens(address _to)
     external
     isFinalized
