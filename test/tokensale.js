@@ -1,26 +1,36 @@
 // Specifically request an abstraction for MetaCoin
 var TheMineToken = artifacts.require("TheMineToken");
 
-// function getSettings(accounts) {
-//   return {
-//     admin1: accounts[1],
-//     admin2: accounts[2],
-//     admin3: accounts[3],
-//     kycValidator: accounts[4],
-//     presaleAccount: accounts[5],
-//     fundingStartBlock: web3.eth.getBlock('latest').number + 1000
-//   };
-// }
+function getSettings(accounts) {
+  return {
+    admin1: accounts[1],
+    admin2: accounts[2],
+    admin3: accounts[3],
+    kycValidator: accounts[4],
+    presaleAccount: accounts[5],
+    fundingStartBlock: web3.eth.getBlock('latest').number + 1000
+  };
+}
 
 contract('TheMineToken', function(accounts) {
-  // settings = getSettings(accounts);
+  settings = getSettings(accounts);
 
-  it("should allocate the presale tokens correctly", function() {
-    return TheMineToken.deployed().then(function(instance) {
-      return instance.balanceOf.call(accounts[5]);
-    }).then(function(balance) {
-      assert.equal(balance.valueOf(), 2 * 10**23, "the presale account didn't receive its tokens");
-    });
+  it("should allocate the presale tokens correctly", async function() {
+    let contract = await TheMineToken.deployed();
+    let presaleBalance = await contract.balanceOf.call(settings.presaleAccount).valueOf();
+    
+    assert.equal(presaleBalance, 2 * 10**23, "the presale account didn't receive its tokens");
   });
+
+  // it("shouldn't change the funding start if only one admin signs", async function() {
+  //   let contract = await TheMineToken.deployed();
+  //   let fundingStartBlock = await contract.fundingStartBlock.call().valueOf();
+
+  //   let a1changetx = await contract.updateFundingStart(fundingStartBlock + 1000);
+    
+  //   let newfundingStartBlock = await contract.fundingStartBlock.call();
+
+  //   assert.equal(newfundingStartBlock, fundingStartBlock, "a single admin triggered a change of the funding start block");  
+  // });
 
 });
