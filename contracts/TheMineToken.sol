@@ -305,22 +305,22 @@ contract TheMineToken is StandardToken {
     payable 
     {
         // The start of the fundraising should happen in the future
-        require (block.number < _fundingStartBlock);
+        require(block.number < _fundingStartBlock);
 
         // Admin addresses must be set and must be different
-        require (_admin1 != address(0));
-        require (_admin2 != address(0));
-        require (_admin3 != address(0));
-        require ((_admin1 != _admin2) && (_admin1 != _admin3) && (_admin2 != _admin3));
+        require(_admin1 != address(0));
+        require(_admin2 != address(0));
+        require(_admin3 != address(0));
+        require((_admin1 != _admin2) && (_admin1 != _admin3) && (_admin2 != _admin3));
         
         // Presale account must be properly defined
         require(_presaleAccount != address(0));
 
         // kycValidator must be set and be different from the admins
-        require (_kycValidator != address(0));
-        require (_kycValidator != _admin1);
-        require (_kycValidator != _admin2);
-        require (_kycValidator != _admin3);
+        require(_kycValidator != address(0));
+        require(_kycValidator != _admin1);
+        require(_kycValidator != _admin2);
+        require(_kycValidator != _admin3);
 
         // Set the addresses
         admin1 = _admin1;
@@ -333,8 +333,8 @@ contract TheMineToken is StandardToken {
         savedState = ContractState.Fundraising;
         fundingStartBlock = _fundingStartBlock;
         roundTwoBlock = _fundingStartBlock + FUNDING_ROUND_DURATION_BLOCKS;
-        roundThreeBlock = _fundingStartBlock + 2*FUNDING_ROUND_DURATION_BLOCKS;
-        fundingEndBlock = _fundingStartBlock + 3*FUNDING_ROUND_DURATION_BLOCKS;
+        roundThreeBlock = _fundingStartBlock + 2 * FUNDING_ROUND_DURATION_BLOCKS;
+        fundingEndBlock = _fundingStartBlock + 3 * FUNDING_ROUND_DURATION_BLOCKS;
 
         currentMintingState = MintingState.NotStarted;
 
@@ -342,7 +342,8 @@ contract TheMineToken is StandardToken {
         totalSupply = TOKENS_PRESALE;
         balances[_presaleAccount] = TOKENS_PRESALE;
 
-        ETH_USD_EXCHANGE_RATE_IN_CENTS = 1000 * 100; // 1000 USD in cents
+        // TODO to be set by oraclize
+        ETH_USD_EXCHANGE_RATE_IN_CENTS = 1000 * 100;    // 1000 USD in cents
     }
 
     // Update the fundraising start date
@@ -581,4 +582,5 @@ contract TheMineToken is StandardToken {
         // Log the creation of these tokens
         LogTeamTokensDelivered(_to, tokens);
     }
+
 }
