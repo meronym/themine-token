@@ -1,20 +1,29 @@
 var TheMineToken = artifacts.require("TheMineToken");
 
-module.exports = function(deployer) {
-   deployToken(deployer);
-};
+const promisify = (inner) =>
+    new Promise((resolve, reject) =>
+        inner((err, res) => {
+            if (err) {
+                console.log(err);
+                reject(err);
+            }
+            resolve(res);
+        })
+    );
 
-function deployToken(deployer) {
-    const accounts = web3.eth.accounts;
+module.exports = async function(deployer) {
+    let accounts = await promisify(cb => web3.eth.getAccounts(cb));
+    let lastBlock = await promisify(cb => web3.eth.getBlockNumber(cb));
+
     const admin1 = accounts[1];
     const admin2 = accounts[2];
     const admin3 = accounts[3];
     const kycValidator = accounts[4];
     const presaleAccount = accounts[5];
-    const fundingStartBlock = web3.eth.getBlock('latest').number + 1000;
+    const fundingStartBlock = lastBlock + 1000;
 
     deployer.deploy(
         TheMineToken,
         admin1, admin2, admin3, kycValidator, fundingStartBlock, presaleAccount
     );
-}
+};

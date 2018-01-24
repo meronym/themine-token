@@ -1,0 +1,113 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+</head>
+<body>
+    <div class="container">
+        <h1>The MiNE Token</h1>
+
+        <p>
+            <button type="button" class="btn btn-secondary" id="btn-new-block">New block</button>
+        </p>
+
+        <div id="watch">
+            <table class="table table-dark">
+                <thead>
+                    <tr>
+                        <th>Block</th>
+                        <th>Address</th>
+                        <th>ETH</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ blockNumber }}</td>
+                        <td><small>{{ contractAddress }}</small></td>
+                        <td>{{ contractBalance }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <table class="table">
+                <tbody>
+                    <tr>
+                        <td>Funding Blocks</td>
+                        <td>{{ fundingStartBlock }} / {{ roundTwoBlock }} / {{ roundThreeBlock }} / {{ fundingEndBlock }}</td>
+                    </tr>
+                    <tr><td>state</td><td>{{ state }}</td></tr>
+                    <tr><td>currentMintingState</td><td>{{ currentMintingState }}</td></tr>
+                    <tr><td>totalSupply</td><td>{{ totalSupply }}</td></tr>
+                </tbody>
+            </table>
+
+            <h2>Balances</h2>
+            <table class="table">
+                <tbody>
+                    <!-- {{#accounts}} -->
+                    <tr>
+                        <td>{{ name }}<br/><small>{{ address }}</small></td>
+                        <td>{{ balance }}</td>
+                    </tr>
+                    <!-- {{/accounts}} -->
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/2.3.0/mustache.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3@0.20.4/dist/web3.min.js"></script>
+    
+    <script src="contract.js"></script>
+    
+    <script>
+        var contractAddress = '0x6d351ee6ec6a4023af3a4b5739c19cb50d24334e';
+        var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:7545"));
+        var contract = web3.eth.contract(contractData.abi).at(contractAddress);
+        
+        console.log(contract);
+
+        var names = ['owner', 'admin1', 'admin2', 'admin3', 'kycValidator', 'presaleAccount'];
+        var accounts = [];
+
+        for (let [ix, addr] of web3.eth.accounts.entries()) {
+            accounts.push({
+                name: names[ix],
+                address: addr,
+                balance: contract.balanceOf(addr).valueOf()
+            });
+        }
+
+        var template = $("#watch").html();
+        $("#watch").html(Mustache.to_html(template, {
+            contractAddress: contractAddress,
+            blockNumber: web3.eth.blockNumber,
+            contractBalance: web3.eth.getBalance(contractAddress),
+            state: ['Fundraising', 'Finalized', 'Paused'][contract.state.call()],
+            currentMintingState: ['NotStarted', 'Prepared', 'Committed'][contract.currentMintingState.call()],
+            totalSupply: contract.totalSupply.call(),
+            fundingStartBlock: contract.fundingStartBlock.call(),
+            fundingEndBlock: contract.fundingEndBlock.call(),
+            roundTwoBlock: contract.roundTwoBlock.call(),
+            roundThreeBlock: contract.roundThreeBlock.call(),
+            accounts: accounts,
+        }));
+
+        console.log(web3.eth.accounts[0]);
+
+        $("#btn-new-block").click(e => {
+            web3.eth.sendTransaction({
+                from: '0x630648F88C633Dd73733173DD4d78330b3e25F58',
+                to: '0x819fd11de73132e35ed21ded28948a6112447fd4',
+                value: 1
+            }, function(error, resp) {
+                console.log(error, resp);
+            })
+        });
+    </script>
+</body>
+</html>

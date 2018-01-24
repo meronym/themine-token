@@ -1,25 +1,24 @@
 // Specifically request an abstraction for MetaCoin
 var TheMineToken = artifacts.require("TheMineToken");
 
-function getSettings(accounts) {
+function allocateAccounts(accounts) {
   return {
     admin1: accounts[1],
     admin2: accounts[2],
     admin3: accounts[3],
     kycValidator: accounts[4],
     presaleAccount: accounts[5],
-    fundingStartBlock: web3.eth.getBlock('latest').number + 1000
   };
 }
 
-contract('TheMineToken', function(accounts) {
-  settings = getSettings(accounts);
+contract('TheMineToken', async function(accounts) {
+  acct = allocateAccounts(accounts);
 
   it("should allocate the presale tokens correctly", async function() {
     let contract = await TheMineToken.deployed();
-    let presaleBalance = await contract.balanceOf.call(settings.presaleAccount).valueOf();
+    let presaleBalance = await contract.balanceOf.call(acct.presaleAccount);
     
-    assert.equal(presaleBalance, 2 * 10**23, "the presale account didn't receive its tokens");
+    assert.equal(presaleBalance.valueOf(), 2 * 10**23, "the presale account didn't receive its tokens");
   });
 
   // it("shouldn't change the funding start if only one admin signs", async function() {

@@ -11,15 +11,16 @@ module.exports = {
       host: "127.0.0.1",
       port: 7545,
       network_id: "*", // Match any network id
-      // gas: 6712388,
+      gas: 6700000,
       // gasPrice: 32000000000
     },
     rinkeby: {
       provider: function() {
-        return new HDWalletProvider(settings.mnemonic, "https://rinkeby.infura.io/" + settings.infuraToken);
+        return new HDWalletProvider(settings.mnemonic, "https://rinkeby.infura.io/" + settings.infuraToken, 0, 10);
       },
       network_id: 4,
-      gas: 4612388 // Gas limit used for deploys
+      gas: 6700000,
+      // gasPrice: 32000000000
     }
   },
   solc: {
