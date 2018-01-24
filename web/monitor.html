@@ -8,10 +8,11 @@
         <h1>The MiNE Token</h1>
 
         <p>
+            <button type="button" class="btn btn-warning" id="btn-refresh">Refresh</button>
             <button type="button" class="btn btn-secondary" id="btn-new-block">New block</button>
         </p>
 
-        <div id="watch">
+        <div id="tpl-header">
             <table class="table table-dark">
                 <thead>
                     <tr>
@@ -28,19 +29,55 @@
                     </tr>
                 </tbody>
             </table>
+        </div>
 
-            <table class="table">
-                <tbody>
-                    <tr>
-                        <td>Funding Blocks</td>
-                        <td>{{ fundingStartBlock }} / {{ roundTwoBlock }} / {{ roundThreeBlock }} / {{ fundingEndBlock }}</td>
-                    </tr>
-                    <tr><td>state</td><td>{{ state }}</td></tr>
-                    <tr><td>currentMintingState</td><td>{{ currentMintingState }}</td></tr>
-                    <tr><td>totalSupply</td><td>{{ totalSupply }}</td></tr>
-                </tbody>
-            </table>
 
+        <div class="row">
+            <div id="tpl-state" class="col">
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <td>Funding Blocks</td>
+                            <td>{{ fundingStartBlock }} / {{ roundTwoBlock }} / {{ roundThreeBlock }} / {{ fundingEndBlock }}</td>
+                        </tr>
+                        <tr><td>state</td><td>{{ state }}</td></tr>
+                        <tr><td>currentMintingState</td><td>{{ currentMintingState }}</td></tr>
+                        <tr><td>totalSupply</td><td>{{ totalSupply }}</td></tr>
+                    </tbody>
+                </table>                    
+            </div>
+
+            <div class="col">
+                <form id="transaction-form">
+                  <div class="form-group">
+                    <select multiple name="account" class="form-control" id="account-select">
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <select name="method" class="form-control" id="method-select">
+                      <option>pause</option>
+                      <option>proceed</option>
+                      <option>updateFundingStart</option>
+                    </select>
+                  </div>                      
+                  <div class="row form-group">
+                    <div class="col">
+                      <input type="text" class="form-control" placeholder="...">
+                    </div>
+                    <div class="col">
+                      <input type="text" class="form-control" placeholder="ETH">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-primary">Send</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="alerts">
+
+        </div>
+
+        <div id="tpl-balances">
             <h2>Balances</h2>
             <table class="table">
                 <tbody>
@@ -65,40 +102,58 @@
     <script src="contract.js"></script>
     
     <script>
-        var contractAddress = '0x6d351ee6ec6a4023af3a4b5739c19cb50d24334e';
-        var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:7545"));
-        var contract = web3.eth.contract(contractData.abi).at(contractAddress);
+        let contractAddress = '0xbdc3a8f525cbc70a22884841ddb4c4aeec2c7df0';
+        let web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:7545"));
+        let contract = web3.eth.contract(contractData.abi).at(contractAddress);
         
         console.log(contract);
 
-        var names = ['owner', 'admin1', 'admin2', 'admin3', 'kycValidator', 'presaleAccount'];
-        var accounts = [];
-
-        for (let [ix, addr] of web3.eth.accounts.entries()) {
-            accounts.push({
-                name: names[ix],
-                address: addr,
-                balance: contract.balanceOf(addr).valueOf()
-            });
+        let names = [
+            'owner', 'admin1', 'admin2', 'admin3', 'kycValidator', 'presaleAccount',
+            'teamAccount', 'user1', 'user2', 'user3'
+        ];
+        
+        let addressByName = {};
+        for (let [ix, name] of names.entries()) {
+            addressByName[name] = web3.eth.accounts[ix];
         }
 
-        var template = $("#watch").html();
-        $("#watch").html(Mustache.to_html(template, {
-            contractAddress: contractAddress,
-            blockNumber: web3.eth.blockNumber,
-            contractBalance: web3.eth.getBalance(contractAddress),
-            state: ['Fundraising', 'Finalized', 'Paused'][contract.state.call()],
-            currentMintingState: ['NotStarted', 'Prepared', 'Committed'][contract.currentMintingState.call()],
-            totalSupply: contract.totalSupply.call(),
-            fundingStartBlock: contract.fundingStartBlock.call(),
-            fundingEndBlock: contract.fundingEndBlock.call(),
-            roundTwoBlock: contract.roundTwoBlock.call(),
-            roundThreeBlock: contract.roundThreeBlock.call(),
-            accounts: accounts,
-        }));
+        function fetchData() {
+            let accounts = [];
+            for (let [ix, addr] of web3.eth.accounts.entries()) {
+                accounts.push({
+                    name: names[ix],
+                    address: addr,
+                    balance: contract.balanceOf(addr).valueOf()
+                });
+            }
+            return {
+                contractAddress: contractAddress,
+                blockNumber: web3.eth.blockNumber,
+                contractBalance: web3.eth.getBalance(contractAddress),
+                state: ['Fundraising', 'Finalized', 'Paused'][contract.state.call()],
+                currentMintingState: ['NotStarted', 'Prepared', 'Committed'][contract.currentMintingState.call()],
+                totalSupply: contract.totalSupply.call(),
+                fundingStartBlock: contract.fundingStartBlock.call(),
+                fundingEndBlock: contract.fundingEndBlock.call(),
+                roundTwoBlock: contract.roundTwoBlock.call(),
+                roundThreeBlock: contract.roundThreeBlock.call(),
+                accounts: accounts,
+            }
+        }
 
-        console.log(web3.eth.accounts[0]);
+        let tplHeader = $("#tpl-header").html();
+        let tplState = $("#tpl-state").html();
+        let tplBalances = $("#tpl-balances").html();
 
+        function refresh() {
+            let data = fetchData();
+            $("#tpl-header").html(Mustache.to_html(tplHeader, data));
+            $("#tpl-state").html(Mustache.to_html(tplState, data));
+            $("#tpl-balances").html(Mustache.to_html(tplBalances, data));
+        }
+
+        // poke the blockchain with a dummy transaction to generate a new block
         $("#btn-new-block").click(e => {
             web3.eth.sendTransaction({
                 from: '0x630648F88C633Dd73733173DD4d78330b3e25F58',
@@ -106,8 +161,69 @@
                 value: 1
             }, function(error, resp) {
                 console.log(error, resp);
+                refresh();
             })
         });
+
+        // assign job to the refresh button
+        $("#btn-refresh").click(e => {
+            refresh();
+        });
+
+        // populate the account list with known addresses
+        for (let name of names) {
+            $("#account-select").append($('<option>', {
+                value: addressByName[name],
+                text: name
+            }));
+        }
+
+        var alertCounter = 0;
+
+        $("#transaction-form").submit(function(e) {
+            e.preventDefault();
+            
+            let accounts = [];
+            let method = null;
+            
+            for (let data of $("#transaction-form").serializeArray()) {
+                if (data.name === 'account') {
+                    accounts.push(data.value);
+                } else if (data.name === 'method') {
+                    method = data.value;
+                }
+            }
+
+            function pushAlert(type, message) {
+                let alertID = `alert${alertCounter}`;
+                $("#alerts").append(`<div id="${alertID}" class="alert alert-${type} fade show" role="alert">${message}</div>`);
+                setTimeout(function() {
+                    $('#' + alertID).alert('close');
+                }, 5000);
+                alertCounter++;
+            }
+
+            if (!accounts.length) {
+                pushAlert('warning', 'Nothing sent (no accounts selected)');
+            } else {
+                for(let acct of accounts) {
+                    contract[method]({
+                        from: acct,
+                        value: web3.toWei(0)
+                    }, function(error, result) {
+                        if (error) {
+                            pushAlert('danger', error);
+                        } else {
+                            pushAlert('success', result);
+                        }
+                        refresh();
+                    });
+                }
+            }
+        });
+
+        refresh();
+
     </script>
 </body>
 </html>

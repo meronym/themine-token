@@ -74,9 +74,9 @@ contract TheMineToken is StandardToken {
         multiSigHashes[msg.sender] = keccak256(msg.data);
 
         // Check if the stored msg.data hash equals to the one of the other admins
-        if (((multiSigHashes[admin1]) == (multiSigHashes[admin2])) ||
-            ((multiSigHashes[admin2]) == (multiSigHashes[admin3])) ||
-            ((multiSigHashes[admin1]) == (multiSigHashes[admin3]))) {
+        if ((msg.sender != admin1 && multiSigHashes[msg.sender] == multiSigHashes[admin1]) ||
+            (msg.sender != admin2 && multiSigHashes[msg.sender] == multiSigHashes[admin2]) ||
+            (msg.sender != admin3 && multiSigHashes[msg.sender] == multiSigHashes[admin3])) {
             // If yes, at least two admins agreed - continue
             _;
 
@@ -155,7 +155,7 @@ contract TheMineToken is StandardToken {
     function proceed()
     external
     isPaused
-    onlyOwner   // Only both admins calling this method can proceed with the contract
+    onlyOwner   // Only both admins calling this method can resume the contract
     {
         // Move the contract to the state it was before we paused it
         state = savedState;
@@ -325,7 +325,7 @@ contract TheMineToken is StandardToken {
         // Set the addresses
         admin1 = _admin1;
         admin2 = _admin2;
-        admin2 = _admin3;
+        admin3 = _admin3;
         kycValidator = _kycValidator;
 
         // Init contract state
@@ -582,5 +582,5 @@ contract TheMineToken is StandardToken {
         // Log the creation of these tokens
         LogTeamTokensDelivered(_to, tokens);
     }
-
+    
 }
