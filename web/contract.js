@@ -1,4 +1,5 @@
 contractData = {
+    "address": "0x6d351ee6ec6a4023af3a4b5739c19cb50d24334e",
     "abi": [
     {
       "constant": false,
@@ -61,7 +62,7 @@ contractData = {
       "name": "approve",
       "outputs": [
         {
-          "name": "",
+          "name": "success",
           "type": "bool"
         }
       ],
@@ -100,7 +101,7 @@ contractData = {
     {
       "constant": false,
       "inputs": [],
-      "name": "MintCommit",
+      "name": "mintFinalize",
       "outputs": [
         {
           "name": "success",
@@ -137,6 +138,20 @@ contractData = {
       ],
       "payable": false,
       "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "mintCancel",
+      "outputs": [
+        {
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -182,6 +197,43 @@ contractData = {
     },
     {
       "constant": false,
+      "inputs": [
+        {
+          "name": "myid",
+          "type": "bytes32"
+        },
+        {
+          "name": "result",
+          "type": "string"
+        }
+      ],
+      "name": "__callback",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "holders",
+      "outputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
       "inputs": [],
       "name": "proceed",
       "outputs": [],
@@ -218,6 +270,56 @@ contractData = {
       "type": "function"
     },
     {
+      "constant": false,
+      "inputs": [],
+      "name": "mintCommit",
+      "outputs": [
+        {
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "name": "myid",
+          "type": "bytes32"
+        },
+        {
+          "name": "result",
+          "type": "string"
+        },
+        {
+          "name": "proof",
+          "type": "bytes"
+        }
+      ],
+      "name": "__callback",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "oraclizeQueryCost",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "constant": true,
       "inputs": [],
       "name": "mintAddress",
@@ -229,20 +331,6 @@ contractData = {
       ],
       "payable": false,
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "constant": false,
-      "inputs": [],
-      "name": "MintFinalize",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "bool"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -289,6 +377,29 @@ contractData = {
     },
     {
       "constant": false,
+      "inputs": [
+        {
+          "name": "_to",
+          "type": "address"
+        },
+        {
+          "name": "_value",
+          "type": "uint256"
+        }
+      ],
+      "name": "mintPrepare",
+      "outputs": [
+        {
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
       "inputs": [],
       "name": "refund",
       "outputs": [],
@@ -312,25 +423,11 @@ contractData = {
     },
     {
       "constant": false,
-      "inputs": [
-        {
-          "name": "_spender",
-          "type": "address"
-        },
-        {
-          "name": "_subtractedValue",
-          "type": "uint256"
-        }
-      ],
-      "name": "decreaseApproval",
-      "outputs": [
-        {
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "nonpayable",
+      "inputs": [],
+      "name": "updatePrice",
+      "outputs": [],
+      "payable": true,
+      "stateMutability": "payable",
       "type": "function"
     },
     {
@@ -345,6 +442,20 @@ contractData = {
       "outputs": [
         {
           "name": "balance",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "getHolderCount",
+      "outputs": [
+        {
+          "name": "_holderCount",
           "type": "uint256"
         }
       ],
@@ -395,20 +506,6 @@ contractData = {
       ],
       "name": "approveKyc",
       "outputs": [],
-      "payable": false,
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "constant": false,
-      "inputs": [],
-      "name": "MintCancel",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "bool"
-        }
-      ],
       "payable": false,
       "stateMutability": "nonpayable",
       "type": "function"
@@ -671,6 +768,25 @@ contractData = {
     },
     {
       "constant": true,
+      "inputs": [
+        {
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "isHolder",
+      "outputs": [
+        {
+          "name": "",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
       "inputs": [],
       "name": "fundingStartBlock",
       "outputs": [
@@ -681,52 +797,6 @@ contractData = {
       ],
       "payable": false,
       "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "constant": false,
-      "inputs": [
-        {
-          "name": "_spender",
-          "type": "address"
-        },
-        {
-          "name": "_addedValue",
-          "type": "uint256"
-        }
-      ],
-      "name": "increaseApproval",
-      "outputs": [
-        {
-          "name": "",
-          "type": "bool"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "constant": false,
-      "inputs": [
-        {
-          "name": "_to",
-          "type": "address"
-        },
-        {
-          "name": "_value",
-          "type": "uint256"
-        }
-      ],
-      "name": "MintPrepare",
-      "outputs": [
-        {
-          "name": "success",
-          "type": "bool"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -744,7 +814,7 @@ contractData = {
       "name": "allowance",
       "outputs": [
         {
-          "name": "",
+          "name": "remaining",
           "type": "uint256"
         }
       ],
@@ -774,6 +844,25 @@ contractData = {
         {
           "name": "",
           "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "name": "_index",
+          "type": "uint256"
+        }
+      ],
+      "name": "getHolder",
+      "outputs": [
+        {
+          "name": "_holder",
+          "type": "address"
         }
       ],
       "payable": false,
@@ -871,6 +960,30 @@ contractData = {
       "anonymous": false,
       "inputs": [
         {
+          "indexed": false,
+          "name": "price",
+          "type": "string"
+        }
+      ],
+      "name": "updatedPrice",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "name": "description",
+          "type": "string"
+        }
+      ],
+      "name": "newOraclizeQuery",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
           "indexed": true,
           "name": "_to",
           "type": "address"
@@ -940,21 +1053,21 @@ contractData = {
       "inputs": [
         {
           "indexed": true,
-          "name": "owner",
+          "name": "_from",
           "type": "address"
         },
         {
           "indexed": true,
-          "name": "spender",
+          "name": "_to",
           "type": "address"
         },
         {
           "indexed": false,
-          "name": "value",
+          "name": "_value",
           "type": "uint256"
         }
       ],
-      "name": "Approval",
+      "name": "Transfer",
       "type": "event"
     },
     {
@@ -962,21 +1075,21 @@ contractData = {
       "inputs": [
         {
           "indexed": true,
-          "name": "from",
+          "name": "_owner",
           "type": "address"
         },
         {
           "indexed": true,
-          "name": "to",
+          "name": "_spender",
           "type": "address"
         },
         {
           "indexed": false,
-          "name": "value",
+          "name": "_value",
           "type": "uint256"
         }
       ],
-      "name": "Transfer",
+      "name": "Approval",
       "type": "event"
     }
   ]

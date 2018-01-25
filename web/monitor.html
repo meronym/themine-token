@@ -32,66 +32,120 @@
         </div>
 
 
-        <div class="row">
-            <div id="tpl-state" class="col">
-                <table class="table">
-                    <tbody>
-                        <tr>
-                            <td>Funding Blocks</td>
-                            <td>{{ fundingStartBlock }} / {{ roundTwoBlock }} / {{ roundThreeBlock }} / {{ fundingEndBlock }}</td>
-                        </tr>
-                        <tr><td>state</td><td>{{ state }}</td></tr>
-                        <tr><td>currentMintingState</td><td>{{ currentMintingState }}</td></tr>
-                        <tr><td>totalSupply</td><td>{{ totalSupply }}</td></tr>
-                    </tbody>
-                </table>                    
-            </div>
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item">
+            <a class="nav-link active" id="status-tab" data-toggle="tab" href="#status" role="tab" aria-controls="status" aria-selected="true">Status</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="balances-tab" data-toggle="tab" href="#balances" role="tab" aria-controls="balances" aria-selected="false">Balances</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" id="signer-tab" data-toggle="tab" href="#signer" role="tab" aria-controls="signer" aria-selected="false">Signer</a>
+          </li>
+        </ul>
 
-            <div class="col">
-                <form id="transaction-form">
-                  <div class="form-group">
-                    <select multiple name="account" class="form-control" id="account-select">
-                    </select>
-                  </div>
-                  <div class="form-group">
-                    <select name="method" class="form-control" id="method-select">
-                      <option>pause</option>
-                      <option>proceed</option>
-                      <option>updateFundingStart</option>
-                    </select>
-                  </div>                      
-                  <div class="row form-group">
-                    <div class="col">
-                      <input type="text" class="form-control" placeholder="...">
+        <br/>
+
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="status" role="tabpanel" aria-labelledby="status-tab">
+                <div class="row">
+                    <div id="tpl-state" class="col">
+                        <table class="table">
+                            <tbody>
+                                <tr>
+                                    <td>Funding Blocks</td>
+                                    <td>{{ fundingStartBlock }} / {{ roundTwoBlock }} / {{ roundThreeBlock }} / {{ fundingEndBlock }}</td>
+                                </tr>
+                                <tr><td>state</td><td>{{ state }}</td></tr>
+                                <tr><td>totalSupply</td><td>{{ totalSupply }}</td></tr>
+                                <tr><td>ETH rcv/unKYC</td><td>{{ allReceivedEth }} / {{ allUnKycedEth }}</td></tr>
+                            </tbody>
+                        </table>                    
+                        
+                        <table class="table">
+                            <tbody>
+                                <tr><td>mintingState</td><td>{{ currentMintingState }}</td></tr>
+                                <!-- <tr><td>mintAddress</td><td><small>{{ mintAddress }}</small></td></tr> -->
+                                <tr><td>mintValue</td><td>{{ mintValue }}</td></tr>
+                                <tr><td>mintPrepare</td><td>{{ mintPrepareBlock }}</td></tr>
+                            </tbody>
+                        </table>
                     </div>
+
                     <div class="col">
-                      <input type="text" class="form-control" placeholder="ETH">
+                        <form id="transaction-form">
+                          <div class="form-group">
+                            <select multiple name="account" class="form-control" id="account-select">
+                            </select>
+                          </div>
+                          <div class="form-group">
+                            <select name="method" class="form-control" id="method-select">
+                              <option>pause</option>
+                              <option>proceed</option>
+                              <option>updateFundingStart</option>
+                              <option>createTokens</option>
+                              <option>approveKyc</option>
+                              <option>rejectKyc</option>
+                              <option>refund</option>
+                              <option>retrieveEth</option>
+                              <option>finalize</option>
+                              <option>deliverTeamTokens</option>
+                              <option>-------------</option>
+                              <option>mintPrepare</option>
+                              <option>mintCommit</option>
+                              <option>mintCancel</option>
+                              <option>mintFinalize</option>
+                              <option>-------------</option>
+                              <option>transfer</option>
+                            </select>
+                          </div>                      
+                          <div class="row form-group">
+                            <div class="col">
+                              <input type="text" name="param1" class="form-control" placeholder="...">
+                            </div>
+                            <div class="col">
+                              <input type="text" name="param2" class="form-control" placeholder="...">
+                            </div>
+                          </div>
+                          <div class="form-group">
+                              <input type="text" name="ethvalue" class="form-control" placeholder="ETH">
+                          </div>
+                          <button type="submit" class="btn btn-primary">Send</button>
+                        </form>
                     </div>
-                  </div>
-                  <button type="submit" class="btn btn-primary">Send</button>
-                </form>
+                </div>
             </div>
-        </div>
+            
+            <div class="tab-pane fade" id="balances" role="tabpanel" aria-labelledby="balances-tab">
+                <div id="tpl-balances">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Account</th>
+                                <th>KYC</th>
+                                <th>MINE / ETH</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- {{#accounts}} -->
+                            <tr>
+                                <td>{{ name }}<br/><small>{{ address }}</small></td>
+                                <td>{{ kyc }}</td>
+                                <td>{{ balance }}<br/><small>{{ eth }}</small></td>
+                            </tr>
+                            <!-- {{/accounts}} -->
+                        </tbody>
+                    </table>
+                </div>                
+            </div>
+            
+            <div class="tab-pane fade" id="signer" role="tabpanel" aria-labelledby="signer-tab">...</div>
 
-        <div id="alerts">
+        </div>  <!-- tab-content -->
 
-        </div>
+        <div id="alerts"></div>
 
-        <div id="tpl-balances">
-            <h2>Balances</h2>
-            <table class="table">
-                <tbody>
-                    <!-- {{#accounts}} -->
-                    <tr>
-                        <td>{{ name }}<br/><small>{{ address }}</small></td>
-                        <td>{{ balance }}</td>
-                    </tr>
-                    <!-- {{/accounts}} -->
-                </tbody>
-            </table>
-        </div>
-
-    </div>
+    </div>  <!-- container -->
 
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
@@ -102,9 +156,8 @@
     <script src="contract.js"></script>
     
     <script>
-        let contractAddress = '0xbdc3a8f525cbc70a22884841ddb4c4aeec2c7df0';
         let web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:7545"));
-        let contract = web3.eth.contract(contractData.abi).at(contractAddress);
+        let contract = web3.eth.contract(contractData.abi).at(contractData.address);
         
         console.log(contract);
 
@@ -124,20 +177,27 @@
                 accounts.push({
                     name: names[ix],
                     address: addr,
-                    balance: contract.balanceOf(addr).valueOf()
+                    balance: web3.fromWei(contract.balanceOf(addr).valueOf(), 'ether'),
+                    eth: web3.fromWei(web3.eth.getBalance(addr), 'ether'),
+                    kyc: contract.kycVerified.call(addr),
                 });
             }
             return {
-                contractAddress: contractAddress,
+                contractAddress: contractData.address,
                 blockNumber: web3.eth.blockNumber,
-                contractBalance: web3.eth.getBalance(contractAddress),
+                contractBalance: web3.fromWei(web3.eth.getBalance(contractData.address), 'ether'),
                 state: ['Fundraising', 'Finalized', 'Paused'][contract.state.call()],
-                currentMintingState: ['NotStarted', 'Prepared', 'Committed'][contract.currentMintingState.call()],
-                totalSupply: contract.totalSupply.call(),
+                totalSupply: web3.fromWei(contract.totalSupply.call(), 'ether'),
+                allReceivedEth: web3.fromWei(contract.allReceivedEth.call(), 'ether'),
+                allUnKycedEth: web3.fromWei(contract.allUnKycedEth.call(), 'ether'),
                 fundingStartBlock: contract.fundingStartBlock.call(),
                 fundingEndBlock: contract.fundingEndBlock.call(),
                 roundTwoBlock: contract.roundTwoBlock.call(),
                 roundThreeBlock: contract.roundThreeBlock.call(),
+                currentMintingState: ['NotStarted', 'Prepared', 'Committed'][contract.currentMintingState.call()],
+                mintAddress: contract.mintAddress.call(),
+                mintValue: contract.mintValue.call(),
+                mintPrepareBlock: contract.mintPrepareBlock.call(),
                 accounts: accounts,
             }
         }
@@ -185,12 +245,21 @@
             
             let accounts = [];
             let method = null;
-            
+            let param1 = undefined;
+            let param2 = undefined;
+            let ethvalue = 0;
+
             for (let data of $("#transaction-form").serializeArray()) {
                 if (data.name === 'account') {
                     accounts.push(data.value);
                 } else if (data.name === 'method') {
                     method = data.value;
+                } else if (data.name === 'param1') {
+                    param1 = data.value;
+                } else if (data.name === 'param2') {
+                    param2 = data.value;
+                } else if (data.name === 'ethvalue') {
+                    ethvalue = web3.toWei(data.value);
                 }
             }
 
@@ -203,21 +272,37 @@
                 alertCounter++;
             }
 
+            function txCallback(error, result) {
+                if (error) {
+                    pushAlert('danger', error);
+                } else {
+                    pushAlert('success', result);
+                }
+                refresh();                
+            }
+
             if (!accounts.length) {
-                pushAlert('warning', 'Nothing sent (no accounts selected)');
+                pushAlert('warning', 'Select at least one account');
             } else {
                 for(let acct of accounts) {
-                    contract[method]({
+                    let cfg = {
                         from: acct,
-                        value: web3.toWei(0)
-                    }, function(error, result) {
-                        if (error) {
-                            pushAlert('danger', error);
+                        value: ethvalue,
+                        gas: 2000000,                      
+                    };
+                    try {
+                        if (param1) {
+                            if (param2) {
+                                contract[method](param1, param2, cfg, txCallback);
+                            } else {
+                                contract[method](param1, cfg, txCallback);
+                            }
                         } else {
-                            pushAlert('success', result);
+                            contract[method](cfg, txCallback);
                         }
-                        refresh();
-                    });
+                    } catch(e) {
+                        pushAlert('danger', e);
+                    }
                 }
             }
         });

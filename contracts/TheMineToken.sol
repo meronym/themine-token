@@ -1,18 +1,23 @@
 pragma solidity ^0.4.17;
 
-import 'zeppelin-solidity/contracts/token/StandardToken.sol';
+import './StandardToken.sol';
+import './usingOraclize.sol';
 
-contract TheMineToken is StandardToken {
+contract TheMineToken is StandardToken, usingOraclize {
     // Token metadata
     string public constant name = 'TheMineToken';
     string public constant symbol = 'MINE';
     uint8 public constant decimals = 18;
-    string public constant version = '0.1';
+    string public constant version = '0.2';
 
     // Fundraising goals: minimums and maximums
     uint256 public constant dec_multiplier = uint(10) ** decimals;
     uint256 public constant TOKEN_CREATION_CAP = 5 * (10**6) * dec_multiplier; // 5 million tokens
-    uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;  // 500 000 tokens
+    
+    // uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;  // 500 000 tokens
+    // FIXME
+    uint256 public constant TOKEN_CREATED_MIN = 21 * (10**4) * dec_multiplier;  // 210 000 tokens
+
     uint256 public constant TOKEN_MIN = 1 * dec_multiplier;                    // 1 MINE token
     uint256 public constant TOKENS_PRESALE = 2 * (10**5) * dec_multiplier;     // 200 000 tokens
 
@@ -22,7 +27,9 @@ contract TheMineToken is StandardToken {
     uint256 public constant TOKEN_THIRD_BONUS_MULTIPLIER  = 100;    // 0% bonus
 
     // Round duration expressed in blocks (each round should last approx 10 days)
-    uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10 * (24 * 60 * 4);  // 10 days with 15s block time
+    // uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10 * (24 * 60 * 4);  // 10 days with 15s block time
+    // FIXME
+    uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10;
 
     // Fundraising parameters provided when creating the contract
     uint256 public fundingStartBlock; // block number that triggers the fundraising start
@@ -32,6 +39,11 @@ contract TheMineToken is StandardToken {
 
     // Current ETH/USD exchange rate
     uint256 public ETH_USD_EXCHANGE_RATE_IN_CENTS; // to be set by oraclize
+
+    // Everything oraclize related
+    event updatedPrice(string price);
+    event newOraclizeQuery(string description);
+    uint public oraclizeQueryCost;
 
     // ETH balance per user
     // Since we have different exchange rates at different stages, we need to keep track
@@ -54,6 +66,10 @@ contract TheMineToken is StandardToken {
 
     // For checking if user has already undergone KYC or not, to lock up his tokens until then
     mapping (address => bool) public kycVerified;
+
+    // For keeping track of holders (important for payouts)
+    mapping (address => bool) public isHolder;
+    address[] public holders;
 
     // For tracking if team members already got their tokens
     bool public teamTokensDelivered;
@@ -169,13 +185,13 @@ contract TheMineToken is StandardToken {
     // minting for new rounds of token sales will adhere to a three-stage process 
     // that can only happen after the first ICO is finalized.
     //
-    // 1. The admins broadcast a MintPrepare() transaction that signals their intention
+    // 1. The admins broadcast a mintPrepare() transaction that signals their intention
     // to mint and allocate a specified fresh token supply to a new ICO contract.
     // The current token holders have the opportunity to review this decision and take
     // appropriate action for a period of 7 days.
     //
-    // 2. After 7 days have passed since MintPrepare(), the admins will broadcast
-    // a MintCommit() transaction that effectively creates the defined token supply and
+    // 2. After 7 days have passed since mintPrepare(), the admins will broadcast
+    // a mintCommit() transaction that effectively creates the defined token supply and
     // assigns it to the specified ICO contract. At this time, all the token transfers 
     // are locked except the transfers that originate from the ICO contract address
     // (these are needed in order to distribute the tokens during the next ICOs).
@@ -191,9 +207,11 @@ contract TheMineToken is StandardToken {
     uint256 public mintPrepareBlock;
 
     // The minimum delay between Prepare() and Commit() is set to 7 days at 15 sec per block
-    uint256 public constant MINT_COMMIT_BLOCK_DELAY = (60 / 15) * 60 * 24 * 7;
+    // uint256 public constant MINT_COMMIT_BLOCK_DELAY = (60 / 15) * 60 * 24 * 7;
+    // FIXME
+    uint256 public constant MINT_COMMIT_BLOCK_DELAY = 10;
 
-    function MintPrepare(address _to, uint256 _value)
+    function mintPrepare(address _to, uint256 _value)
     external
     isFinalized  // Minting can only work after the first ICO is finalized
     onlyOwner
@@ -210,7 +228,7 @@ contract TheMineToken is StandardToken {
         return true;
     }
 
-    function MintCancel()
+    function mintCancel()
     external
     isFinalized  // Minting can only work after the first ICO is finalized
     onlyOwner
@@ -224,7 +242,7 @@ contract TheMineToken is StandardToken {
         return true;
     }
 
-    function MintCommit()
+    function mintCommit()
     external
     isFinalized  // Minting can only work after the first ICO is finalized
     onlyOwner
@@ -251,7 +269,7 @@ contract TheMineToken is StandardToken {
         return true;
     }
 
-    function MintFinalize()
+    function mintFinalize()
     external
     isFinalized  // Minting can only work after the first ICO is finalized
     onlyOwner
@@ -267,12 +285,45 @@ contract TheMineToken is StandardToken {
 
     modifier transfersAllowed(address _from) {
         require(
+            // Do not allow transfers if the contract is Paused
+            state != ContractState.Paused &&
             // Do not allow transfers during the first ICO
             (block.number < fundingStartBlock || state == ContractState.Finalized) &&
             // Only allow transfers during the next token sales if they originate from the
-            // specified contract address (in order to distribute the minted tokens)
+            // specified ICO contract address (in order to distribute the minted tokens)
             (currentMintingState != MintingState.Committed || _from == mintAddress));
         _;
+    }
+
+    // Allows to figure out the amount of known token holders
+    function getHolderCount()
+    public
+    constant
+    returns (uint256 _holderCount)
+    {
+        return holders.length;
+    }
+
+    // Allows for easier retrieval of holder by array index
+    function getHolder(uint256 _index)
+    public
+    constant
+    returns (address _holder)
+    {
+        return holders[_index];
+    }
+
+    function trackHolder(address _to)
+    private
+    returns (bool success)
+    {
+        // Check if the recipient is a known token holder
+        if (isHolder[_to] == false) {
+            // if not, add him to the holders array and mark him as a known holder
+            holders.push(_to);
+            isHolder[_to] = true;
+        }
+        return true;
     }
 
     // Overridden method to check for state conditions before allowing transfer of tokens
@@ -281,7 +332,11 @@ contract TheMineToken is StandardToken {
     transfersAllowed(msg.sender)
     returns (bool success)
     {
-        return super.transfer(_to, _value);
+        bool result = super.transfer(_to, _value);
+        if (result) {
+            trackHolder(_to); // track the owner for later payouts
+        }
+        return result;
     }
 
     // Overridden method to check for state conditions before allowing transfer of tokens
@@ -290,7 +345,11 @@ contract TheMineToken is StandardToken {
     transfersAllowed(msg.sender)
     returns (bool success)
     {
-        return super.transferFrom(_from, _to, _value);
+        bool result = super.transferFrom(_from, _to, _value);
+        if (result) {
+            trackHolder(_to); // track the owner for later payouts
+        }
+        return result;
     }
 
     // Token contract constructor
@@ -341,10 +400,44 @@ contract TheMineToken is StandardToken {
         // Allocate the presale tokens
         totalSupply = TOKENS_PRESALE;
         balances[_presaleAccount] = TOKENS_PRESALE;
+        trackHolder(_presaleAccount);
 
         // TODO to be set by oraclize
         ETH_USD_EXCHANGE_RATE_IN_CENTS = 1000 * 100;    // 1000 USD in cents
+
+        // Oraclize 
+        // oraclize_setCustomGasPrice(100000000000 wei); // set the gas price a little bit higher, so the pricefeed definitely works
+        // updatePrice();
+        // oraclizeQueryCost = oraclize_getPrice("URL");
     }
+
+    //// oraclize START
+
+    // @dev oraclize is called recursively here - once a callback fetches the newest ETH price, the next callback is scheduled for the next hour again
+    function __callback(bytes32 myid, string result) {
+        require(msg.sender == oraclize_cbAddress());
+
+        // setting the token price here
+        ETH_USD_EXCHANGE_RATE_IN_CENTS = SafeMath.parse(result);
+        updatedPrice(result);
+
+        // fetch the next price
+        updatePrice();
+    }
+
+    function updatePrice() payable {    // can be left public as a way for replenishing contract's ETH balance, just in case
+        if (msg.sender != oraclize_cbAddress()) {
+            require(msg.value >= 200 finney);
+        }
+        if (oraclize_getPrice("URL") > this.balance) {
+            newOraclizeQuery("Oraclize query was NOT sent, please add some ETH to cover for the query fee");
+        } else {
+            newOraclizeQuery("Oraclize sent, wait..");
+            // Schedule query in 6 hours. Set the gas amount to 220000, as parsing in __callback takes around 70000 - we play it safe.
+            oraclize_query(21600, "URL", "json(https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD).USD", 220000);
+        }
+    }
+    //// oraclize END
 
     // Update the fundraising start date
     function updateFundingStart(uint256 _fundingStartBlock)
@@ -367,7 +460,7 @@ contract TheMineToken is StandardToken {
     function getCurrentBonusRate()
     private
     constant
-    returns (uint256 currentDiscountRate)
+    returns (uint256 currentBonusRate)
     {
         // determine which bonus to apply
         if (block.number < roundTwoBlock) {
@@ -416,6 +509,8 @@ contract TheMineToken is StandardToken {
 
         totalSupply = checkedSupply;
         balances[msg.sender] += tokens;  // safeAdd not needed
+
+        trackHolder(msg.sender);
 
         // Log the creation of these tokens
         LogCreateMINE(msg.sender, tokens);
@@ -543,7 +638,7 @@ contract TheMineToken is StandardToken {
     minimumReached
     onlyOwner  // Only the admins calling this method exactly the same way can finalize the sale.
     {
-        // Only allow to finalize the contract before the ending block if we already reached any of the two caps
+        // Only allow to finalize the contract before the ending block if we already reached the minimum cap
         require(block.number > fundingEndBlock || totalSupply >= TOKEN_CREATED_MIN);
         
         // make sure a recipient was defined
@@ -567,8 +662,8 @@ contract TheMineToken is StandardToken {
         require(_to != address(0));
 
         // Company, advisors and supporters get 12% of a whole final pie
-        // thus we need to add ~13.6% to the current totalSupply now
-        // e.g. (100 - 12) * x = 100, where x amounts to roughly about 1.13636 and 12 is the be the team's final allocation
+        // (100 - 12) * x = 100, where 12 is the team's final allocation and x amounts to roughly about 1.13636
+        // thus we need to increase the current totalSupply with ~13.6%
         uint256 newTotalSupply = SafeMath.mul(totalSupply, 113636) / 100000;
 
         // give company and supporters their 12% 
@@ -579,8 +674,9 @@ contract TheMineToken is StandardToken {
         teamTokensDelivered = true;
         totalSupply = newTotalSupply;
 
+        trackHolder(_to);
+
         // Log the creation of these tokens
         LogTeamTokensDelivered(_to, tokens);
     }
-    
 }
