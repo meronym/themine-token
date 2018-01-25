@@ -13,11 +13,7 @@ contract TheMineToken is StandardToken, usingOraclize {
     // Fundraising goals: minimums and maximums
     uint256 public constant dec_multiplier = uint(10) ** decimals;
     uint256 public constant TOKEN_CREATION_CAP = 5 * (10**6) * dec_multiplier; // 5 million tokens
-    
-    // uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;  // 500 000 tokens
-    // FIXME
-    uint256 public constant TOKEN_CREATED_MIN = 21 * (10**4) * dec_multiplier;  // 210 000 tokens
-
+    uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;  // 500 000 tokens
     uint256 public constant TOKEN_MIN = 1 * dec_multiplier;                    // 1 MINE token
     uint256 public constant TOKENS_PRESALE = 2 * (10**5) * dec_multiplier;     // 200 000 tokens
 
@@ -27,9 +23,7 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public constant TOKEN_THIRD_BONUS_MULTIPLIER  = 100;    // 0% bonus
 
     // Round duration expressed in blocks (each round should last approx 10 days)
-    // uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10 * (24 * 60 * 4);  // 10 days with 15s block time
-    // FIXME
-    uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10;
+    uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10 * (24 * 60 * 4);  // 10 days with 15s block time
 
     // Fundraising parameters provided when creating the contract
     uint256 public fundingStartBlock; // block number that triggers the fundraising start
@@ -207,9 +201,7 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public mintPrepareBlock;
 
     // The minimum delay between Prepare() and Commit() is set to 7 days at 15 sec per block
-    // uint256 public constant MINT_COMMIT_BLOCK_DELAY = (60 / 15) * 60 * 24 * 7;
-    // FIXME
-    uint256 public constant MINT_COMMIT_BLOCK_DELAY = 10;
+    uint256 public constant MINT_COMMIT_BLOCK_DELAY = (60 / 15) * 60 * 24 * 7;
 
     function mintPrepare(address _to, uint256 _value)
     external
