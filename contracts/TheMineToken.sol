@@ -16,6 +16,8 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;  // 500 000 tokens
     uint256 public constant TOKEN_MIN = 1 * dec_multiplier;                    // 1 MINE token
     uint256 public constant TOKENS_PRESALE = 2 * (10**5) * dec_multiplier;     // 200 000 tokens
+    uint256 public constant MINIMUM_CONTRIBUTION = 2 * (uint(10) ** 17);       // 0.2 ETH
+    uint256 public constant MAXIMUM_CONTRIBUTION = 2 * (uint(10) ** 19);       // 20 ETH
 
     // Bonus multipliers
     uint256 public constant TOKEN_FIRST_BONUS_MULTIPLIER  = 110;    // 10% bonus
@@ -200,8 +202,8 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public mintValue;
     uint256 public mintPrepareBlock;
 
-    // The minimum delay between Prepare() and Commit() is set to 7 days at 15 sec per block
-    uint256 public constant MINT_COMMIT_BLOCK_DELAY = (60 / 15) * 60 * 24 * 7;
+    // The minimum delay between Prepare() and Commit() is set to 31 days at 15 sec per block
+    uint256 public constant MINTING_ANNOUNCE_DELAY = (60 / 15) * 60 * 24 * 31;
 
     function mintPrepare(address _to, uint256 _value)
     external
@@ -248,7 +250,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         
         // Minimum 7 days (at 4 blocks per minute) must have passed since
         // the last MintPrepare()
-        require(block.number - mintPrepareBlock > MINT_COMMIT_BLOCK_DELAY);
+        require(block.number - mintPrepareBlock > MINTING_ANNOUNCE_DELAY);
 
         // If all these conditions are met, mint new MINE tokens to the address
         // specified previously in the MintPrepare() call
@@ -475,12 +477,15 @@ contract TheMineToken is StandardToken, usingOraclize {
     {
         require(block.number >= fundingStartBlock);
         require(block.number <= fundingEndBlock);
-        require(msg.value > 0);
+        require(msg.value >= MINIMUM_CONTRIBUTION);
 
         // Calculate how many tokens need to be allocated
         uint256 valueUsd = SafeMath.mul(msg.value, ETH_USD_EXCHANGE_RATE_IN_CENTS) / 100;
         uint256 tokens = SafeMath.mul(valueUsd, getCurrentBonusRate()) / 100;
         uint256 checkedSupply = SafeMath.add(totalSupply, tokens);
+        
+        // Assign a variable to later compute the total contribution of this sender
+        uint256 newBalance = 0;
 
         // Check the minimum amount of tokens and the token cap
         require(tokens >= TOKEN_MIN);
@@ -489,13 +494,22 @@ contract TheMineToken is StandardToken, usingOraclize {
         // Only when all the checks have passed, we check if the address is already KYCEd and then 
         // update the state (noKycEthBalances, allReceivedEth, totalSupply, and balances) of the contract
         if (kycVerified[msg.sender] == false) {
+            // Require a maximum contribution of 20 ETH
+            newBalance = SafeMath.add(noKycEthBalances[msg.sender], msg.value);
+            require(newBalance <= MAXIMUM_CONTRIBUTION);
+
             // @dev The unKYCed eth balances are moved to main ethBalances after approveKyc()
-            noKycEthBalances[msg.sender] = SafeMath.add(noKycEthBalances[msg.sender], msg.value);
+            noKycEthBalances[msg.sender] = newBalance;
+
             // add the contributed eth to the total unKYCed eth amount
             allUnKycedEth = SafeMath.add(allUnKycedEth, msg.value);
         } else {
+            // Require a maximum contribution of 20 ETH
+            newBalance = SafeMath.add(ethBalances[msg.sender], msg.value);
+            require(newBalance <= MAXIMUM_CONTRIBUTION);
+
             // if buyer is already KYC approved, assign the Eth to the main pool
-            ethBalances[msg.sender] = SafeMath.add(ethBalances[msg.sender], msg.value);
+            ethBalances[msg.sender] = newBalance;
             allReceivedEth = SafeMath.add(allReceivedEth, msg.value);
         }
 
