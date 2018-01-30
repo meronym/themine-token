@@ -3,6 +3,8 @@ pragma solidity ^0.4.17;
 import './StandardToken.sol';
 import './usingOraclize.sol';
 
+// Token contract code heavily inspired by FirstBlood, BAT and Envion
+
 contract TheMineToken is StandardToken, usingOraclize {
     // Token metadata
     string public constant name = 'TheMineToken';
@@ -26,6 +28,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Round duration expressed in blocks (each round should last approx 10 days)
     uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10 * (24 * 60 * 4);  // 10 days with 15s block time
+
+    // The minimum delay between announcing the minting and generating the tokens
+    uint256 public constant MINTING_ANNOUNCE_DELAY = 31 * (24 * 60 * 4);         // 31 days with 15s block time
 
     // Fundraising parameters provided when creating the contract
     uint256 public fundingStartBlock; // block number that triggers the fundraising start
@@ -201,9 +206,6 @@ contract TheMineToken is StandardToken, usingOraclize {
     address public mintAddress;
     uint256 public mintValue;
     uint256 public mintPrepareBlock;
-
-    // The minimum delay between Prepare() and Commit() is set to 31 days at 15 sec per block
-    uint256 public constant MINTING_ANNOUNCE_DELAY = (60 / 15) * 60 * 24 * 31;
 
     function mintPrepare(address _to, uint256 _value)
     external
