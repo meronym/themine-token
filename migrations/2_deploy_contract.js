@@ -21,9 +21,12 @@ module.exports = async function(deployer) {
     const kycValidator = accounts[4];
     const presaleAccount = accounts[5];
     const fundingStartBlock = lastBlock + 1000;
+    const fundingRoundDuration = 10 * (24 * 60 * 4);
+    const mintingAnnounceDelay = 31 * (24 * 60 * 4);
 
     deployer.deploy(
         TheMineToken,
-        admin1, admin2, admin3, kycValidator, fundingStartBlock, presaleAccount
+        admin1, admin2, admin3, kycValidator, presaleAccount,
+        fundingStartBlock, fundingRoundDuration, mintingAnnounceDelay
     );
 };

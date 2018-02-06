@@ -1,4 +1,4 @@
-pragma solidity 0.4.19;
+pragma solidity 0.4.18;
 
 import './StandardToken.sol';
 import './usingOraclize.sol';
@@ -26,17 +26,13 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public constant TOKEN_SECOND_BONUS_MULTIPLIER = 105;    // 5% bonus
     uint256 public constant TOKEN_THIRD_BONUS_MULTIPLIER  = 100;    // 0% bonus
 
-    // Round duration expressed in blocks (each round should last approx 10 days)
-    uint256 public constant FUNDING_ROUND_DURATION_BLOCKS = 10 * (24 * 60 * 4);  // 10 days with 15s block time
-
-    // The minimum delay between announcing the minting and generating the tokens
-    uint256 public constant MINTING_ANNOUNCE_DELAY = 31 * (24 * 60 * 4);         // 31 days with 15s block time
-
     // Fundraising parameters provided when creating the contract
     uint256 public fundingStartBlock; // block number that triggers the fundraising start
-    uint256 public fundingEndBlock;   // block number that guards for the time constraint
+    uint256 public fundingRoundDuration; // round duration expressed in blocks (determines the timestamps below)
     uint256 public roundTwoBlock;     // block number that triggers the second exchange rate change
     uint256 public roundThreeBlock;   // block number that triggers the third exchange rate change
+    uint256 public fundingEndBlock;   // block number that guards for the time constraint
+    uint256 public mintingAnnounceDelay; // minimum delay between announcing the minting and generating the tokens
 
     // Current ETH/USD exchange rate
     uint256 public ETH_USD_EXCHANGE_RATE_IN_CENTS; // to be set by oraclize
@@ -252,7 +248,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         
         // Minimum 7 days (at 4 blocks per minute) must have passed since
         // the last MintPrepare()
-        require(block.number - mintPrepareBlock > MINTING_ANNOUNCE_DELAY);
+        require(block.number - mintPrepareBlock > mintingAnnounceDelay);
 
         // If all these conditions are met, mint new MINE tokens to the address
         // specified previously in the MintPrepare() call
@@ -354,13 +350,23 @@ contract TheMineToken is StandardToken, usingOraclize {
         address _admin2,
         address _admin3,
         address _kycValidator,
+        address _presaleAccount,
         uint256 _fundingStartBlock,
-        address _presaleAccount)
+        uint256 _fundingRoundDuration,
+        uint256 _mintingAnnounceDelay)
     public
     payable 
     {
+        // Make sure the production contract is initialized with the right values
+        // require(_fundingRoundDuration == 10 * (24 * 60 * 4))     // 10 days with 15s block time
+        // require(_mintingAnnounceDelay == 31 * (24 * 60 * 4))     // 31 days with 15s block time
+        require(_fundingRoundDuration > 0);
+        require(_mintingAnnounceDelay > 0);
+
         // The start of the fundraising should happen in the future
         require(block.number < _fundingStartBlock);
+        require(_fundingRoundDuration > 0);
+        require(_mintingAnnounceDelay > 0);
 
         // Admin addresses must be set and must be different
         require(_admin1 != address(0));
@@ -386,10 +392,14 @@ contract TheMineToken is StandardToken, usingOraclize {
         // Init contract state
         state = ContractState.Fundraising;
         savedState = ContractState.Fundraising;
+
+        // Round duration blocks
+        fundingRoundDuration = _fundingRoundDuration;
+        mintingAnnounceDelay = _mintingAnnounceDelay;        
         fundingStartBlock = _fundingStartBlock;
-        roundTwoBlock = _fundingStartBlock + FUNDING_ROUND_DURATION_BLOCKS;
-        roundThreeBlock = _fundingStartBlock + 2 * FUNDING_ROUND_DURATION_BLOCKS;
-        fundingEndBlock = _fundingStartBlock + 3 * FUNDING_ROUND_DURATION_BLOCKS;
+        roundTwoBlock = _fundingStartBlock + fundingRoundDuration;
+        roundThreeBlock = _fundingStartBlock + 2 * fundingRoundDuration;
+        fundingEndBlock = _fundingStartBlock + 3 * fundingRoundDuration;
 
         currentMintingState = MintingState.NotStarted;
 
@@ -447,9 +457,9 @@ contract TheMineToken is StandardToken, usingOraclize {
         require(_fundingStartBlock > block.number);
         
         fundingStartBlock = _fundingStartBlock;
-        roundTwoBlock = _fundingStartBlock + FUNDING_ROUND_DURATION_BLOCKS;
-        roundThreeBlock = _fundingStartBlock + 2*FUNDING_ROUND_DURATION_BLOCKS;
-        fundingEndBlock = _fundingStartBlock + 3*FUNDING_ROUND_DURATION_BLOCKS;
+        roundTwoBlock = _fundingStartBlock + fundingRoundDuration;
+        roundThreeBlock = _fundingStartBlock + 2*fundingRoundDuration;
+        fundingEndBlock = _fundingStartBlock + 3*fundingRoundDuration;
     }
 
     // Returns the current token price
@@ -687,4 +697,13 @@ contract TheMineToken is StandardToken, usingOraclize {
         // Log the creation of these tokens
         LogTeamTokensDelivered(_to, tokens);
     }
+
+    // @dev for test purposes only
+    function ping()
+    external
+    returns (bool success)
+    {
+        return true;
+    }
+
 }

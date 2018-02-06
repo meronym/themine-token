@@ -1,5 +1,5 @@
 contractData = {
-    "address": "0x6d351ee6ec6a4023af3a4b5739c19cb50d24334e",
+    "address": "0x34d32077ca527036afb8cd118632cbc04d6a612f",
     "abi": [
     {
       "constant": false,
