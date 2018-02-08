@@ -78,7 +78,7 @@ async function getExpectedTokenAmount(contract, sentValue) {
   return exchangeRate.toNumber() * bonusMultiplier * parseInt(sentValue / 100 / 100);
 }
 
-async function goToFundraisingStage(contract, stage) {
+async function goToFundraisingStage(contract, stage, offset=0) {
   let goToBlock = 0;
   if (stage == 1) {
     goToBlock = await contract.fundingStartBlock.call();
@@ -91,9 +91,12 @@ async function goToFundraisingStage(contract, stage) {
   } else {
     throw new Error('invalid stage specified');
   }
-  goToBlock = goToBlock.toNumber();
+  goToBlock = goToBlock.toNumber() + offset;
   console.log(`moving to stage ${stage} at block #${goToBlock}`);
   await fastForward(goToBlock, contract);
+
+  let currentBlock = await getCurrentBlock();
+  assert.isAtLeast(currentBlock, goToBlock, `couldn't skip to block ${goToBlock}`);
 }
 
 contract('TheMineToken', async function(accounts) {
@@ -125,4 +128,98 @@ contract('TheMineToken', async function(accounts) {
     }
   });
 
-});  
+  it("shouldn't allocate tokens after fundraising ends", async function() {
+    let contract = await deployContract(acct);
+
+    await goToFundraisingStage(contract, 4);
+
+    try {
+      await contract.createTokens({from: acct.user1, value: web3.toWei(1)});
+    } catch(e) {
+      return true;
+    }
+    throw new Error("created tokens after fundingEndBlock");   
+  });
+
+  it("shouldn't allocate tokens if the contract is paused during the funding round", async function() {
+    let contract = await deployContract(acct);
+    
+    await goToFundraisingStage(contract, 1);
+    await contract.pause({from: acct.admin1 });
+    await contract.pause({from: acct.admin2 });
+
+    let isPaused = await contract.state();
+    assert.equal(isPaused.valueOf(), 2, "couldn't get contract to paused state");
+    
+    try {
+      await contract.createTokens({from: acct.user1, value: web3.toWei(1)});
+    } catch(e) {
+      return true;
+    }
+    throw new Error("created tokens while the contract was paused");
+  });
+
+  it("shouldn't allow token transfers during the funding round", async function() {
+    let contract = await deployContract(acct);
+
+    await goToFundraisingStage(contract, 1);
+    await contract.createTokens({from: acct.user1, value: web3.toWei(1)});
+
+    let balance = await contract.balanceOf(acct.user1);
+    assert.isAtLeast(balance.toNumber(), 1, "couldn't create tokens during fundraising");
+
+    try {
+      await contract.transfer(acct.user2, 1, {from: user1});
+    } catch(e) {
+      return true;
+    }
+    throw new Error("allowed token transfers during the funding round");
+  });
+
+  it("shouldn't allow token transfers before the funding is finalized", async function() {
+    let contract = await deployContract(acct);
+
+    await goToFundraisingStage(contract, 1);
+    await contract.createTokens({from: acct.user1, value: web3.toWei(1)});
+
+    let balance = await contract.balanceOf(acct.user1);
+    assert.isAtLeast(balance.toNumber(), 1, "couldn't create tokens during fundraising");
+
+    await goToFundraisingStage(contract, 4, 10);
+    try {
+      await contract.transfer(acct.user2, 1, {from: user1});
+    } catch(e) {
+      return true;
+    }
+    throw new Error("allowed token transfers before the contract is finalized");
+  });
+
+  it("shouldn't finalize the contract if minimum cap is not reached", async function() {
+    let contract = await deployContract(acct);
+
+    await goToFundraisingStage(contract, 1);
+    await contract.createTokens({from: acct.user1, value: web3.toWei(1)})
+
+    let balance = await contract.balanceOf(acct.user1);
+    assert.isAtLeast(balance.toNumber(), 1, "couldn't create tokens during fundraising");
+
+    await goToFundraisingStage(contract, 4, 10);
+
+    try {
+      await contract.finalize(acct.owner, {from: acct.admin1});  
+      await contract.finalize(acct.owner, {from: acct.admin2});
+    } catch(e) {
+      return true;
+    }
+    throw new Error("contract finalized under minimum cap");
+  });
+
+  // it("should allow token transfers after the funding round is finalized", async function() {
+  //   let state = await contract.state();
+  //   assert.equal(state.toNumber(), 1, "couldn't finalize the funding round");
+
+  //   await contract.transfer(acct.user2, 1, {from: acct.user1});
+  //   balance = await contract.balanceOf(acct.user2);
+  //   assert.equal(balance.toNumber(), 1, "tokens were not transferred");
+  // });
+});
