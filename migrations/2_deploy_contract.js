@@ -22,11 +22,14 @@ module.exports = async function(deployer) {
     const presaleAccount = accounts[5];
     const fundingStartBlock = lastBlock + 1000;
     const fundingRoundDuration = 10 * (24 * 60 * 4);
-    const mintingAnnounceDelay = 31 * (24 * 60 * 4);
+    const mintingPrepareDelay = 31 * (24 * 60 * 4);
+    const mintingCommitDelay = 31 * (24 * 60 * 4);
+    const maxContribution = web3.toWei(20);
 
     deployer.deploy(
         TheMineToken,
         admin1, admin2, admin3, kycValidator, presaleAccount,
-        fundingStartBlock, fundingRoundDuration, mintingAnnounceDelay
+        fundingStartBlock, fundingRoundDuration, mintingPrepareDelay, mintingCommitDelay,
+        maxContribution
     );
 };

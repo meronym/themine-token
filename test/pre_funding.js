@@ -31,13 +31,15 @@ async function deployContract(acct) {
   
   let fundingStartBlock = lastBlock + 10;
   let fundingRoundDuration = 10;
-  let mintingAnnounceDelay = 10;
+  let mintingPrepareDelay = 10;
+  let mintingCommitDelay = 10;
+  let maxContribution = web3.toWei(200);
 
   let contract = await TheMineToken.new(
     acct.admin1, acct.admin2, acct.admin3, acct.kycValidator, acct.presaleAccount,
-    fundingStartBlock, fundingRoundDuration, mintingAnnounceDelay
+    fundingStartBlock, fundingRoundDuration, mintingPrepareDelay, mintingCommitDelay,
+    maxContribution
   );
-  console.log(contract.address);
   return contract;
 }
 

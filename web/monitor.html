@@ -156,7 +156,7 @@
     <script src="contract.js"></script>
     
     <script>
-        let web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:7545"));
+        let web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
         let contract = web3.eth.contract(contractData.abi).at(contractData.address);
         
         console.log(contract);

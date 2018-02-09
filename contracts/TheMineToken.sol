@@ -14,12 +14,10 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Fundraising goals: minimums and maximums
     uint256 public constant dec_multiplier = uint(10) ** decimals;
-    uint256 public constant TOKEN_CREATION_CAP = 5 * (10**6) * dec_multiplier; // 5 million tokens
-    uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;  // 500 000 tokens
-    uint256 public constant TOKEN_MIN = 1 * dec_multiplier;                    // 1 MINE token
-    uint256 public constant TOKENS_PRESALE = 2 * (10**5) * dec_multiplier;     // 200 000 tokens
-    uint256 public constant MINIMUM_CONTRIBUTION = 2 * (uint(10) ** 17);       // 0.2 ETH
-    uint256 public constant MAXIMUM_CONTRIBUTION = 2 * (uint(10) ** 19);       // 20 ETH
+    uint256 public constant TOKEN_CREATION_CAP = 53 * (10**5) * dec_multiplier; // 5.3 million tokens
+    uint256 public constant TOKEN_CREATED_MIN = 5 * (10**5) * dec_multiplier;   // 500 000 tokens
+    uint256 public constant TOKEN_MIN = 1 * dec_multiplier;                     // 1 MINE token
+    uint256 public constant TOKENS_PRESALE = 2 * (10**5) * dec_multiplier;      // 200 000 tokens
 
     // Bonus multipliers
     uint256 public constant TOKEN_FIRST_BONUS_MULTIPLIER  = 110;    // 10% bonus
@@ -32,7 +30,10 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public roundTwoBlock;     // block number that triggers the second exchange rate change
     uint256 public roundThreeBlock;   // block number that triggers the third exchange rate change
     uint256 public fundingEndBlock;   // block number that guards for the time constraint
-    uint256 public mintingAnnounceDelay; // minimum delay between announcing the minting and generating the tokens
+
+    // Per account limits
+    uint256 public minContribution = 2 * (uint(10) ** 17);        // 0.2 ETH
+    uint256 public maxContribution = 2 * (uint(10) ** 19);        // 20 ETH
 
     // Current ETH/USD exchange rate
     uint256 public ETH_USD_EXCHANGE_RATE_IN_CENTS; // to be set by oraclize
@@ -185,9 +186,9 @@ contract TheMineToken is StandardToken, usingOraclize {
     // 1. The admins broadcast a mintPrepare() transaction that signals their intention
     // to mint and allocate a specified fresh token supply to a new ICO contract.
     // The current token holders have the opportunity to review this decision and take
-    // appropriate action for a period of 7 days.
+    // appropriate action for a period of 31 days.
     //
-    // 2. After 7 days have passed since mintPrepare(), the admins will broadcast
+    // 2. After 31 days have passed since mintPrepare(), the admins will broadcast
     // a mintCommit() transaction that effectively creates the defined token supply and
     // assigns it to the specified ICO contract. At this time, all the token transfers 
     // are locked except the transfers that originate from the ICO contract address
@@ -199,9 +200,16 @@ contract TheMineToken is StandardToken, usingOraclize {
     enum MintingState { NotStarted, Prepared, Committed }
     MintingState public currentMintingState;
     
+    // Minimum delay required before announcing a new minting round
+    uint256 public mintingPrepareDelay;
+    // Minimum delay required between announcing the minting and generating the tokens
+    uint256 public mintingCommitDelay;
+    // Address of the new ICO contract that the minting tokens are allocated to
     address public mintAddress;
+    // Amount of new tokens to be minted (should include 10**18 decimals)
     uint256 public mintValue;
-    uint256 public mintPrepareBlock;
+    uint256 public mintPreparedBlock;
+    uint256 public mintFinalizedBlock;
 
     function mintPrepare(address _to, uint256 _value)
     external
@@ -210,12 +218,13 @@ contract TheMineToken is StandardToken, usingOraclize {
     returns (bool success)
     {
         require(currentMintingState == MintingState.NotStarted);
+        require(mintFinalizedBlock + mintingPrepareDelay < block.number);
         require(_to != address(0));
         require(_value > 0);
         
         mintAddress = _to;
         mintValue = _value;
-        mintPrepareBlock = block.number;
+        mintPreparedBlock = block.number;
         currentMintingState = MintingState.Prepared;
         return true;
     }
@@ -229,7 +238,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         require(currentMintingState == MintingState.Prepared);
         mintAddress = address(0);
         mintValue = 0;
-        mintPrepareBlock = 0;
+        mintPreparedBlock = 0;
         currentMintingState = MintingState.NotStarted;
         return true;
     }
@@ -240,18 +249,17 @@ contract TheMineToken is StandardToken, usingOraclize {
     onlyOwner
     returns (bool success)
     {
-        // Check if a previous MintPrepare() is active
+        // Check if a previous mintPrepare() is active
         require(currentMintingState == MintingState.Prepared);
 
         // Check for sane block number values
-        require(block.number > mintPrepareBlock && mintPrepareBlock > 0);
+        require(0 < mintPreparedBlock && mintPreparedBlock < block.number);
         
-        // Minimum 7 days (at 4 blocks per minute) must have passed since
-        // the last MintPrepare()
-        require(block.number - mintPrepareBlock > mintingAnnounceDelay);
+        // Minimum 31 days (at 4 blocks per minute) must have passed since the last mintPrepare()
+        require(mintPreparedBlock + mintingCommitDelay < block.number);
 
         // If all these conditions are met, mint new MINE tokens to the address
-        // specified previously in the MintPrepare() call
+        // specified previously in the mintPrepare() call
         balances[mintAddress] = SafeMath.add(balances[mintAddress], mintValue);
         totalSupply = SafeMath.add(totalSupply, mintValue);
 
@@ -270,6 +278,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         require(currentMintingState == MintingState.Committed);
         totalSupply = SafeMath.sub(totalSupply, balances[mintAddress]);
         balances[mintAddress] = 0;
+        mintFinalizedBlock = block.number;
         mintAddress = address(0);
         currentMintingState = MintingState.NotStarted;
         return true;
@@ -353,20 +362,23 @@ contract TheMineToken is StandardToken, usingOraclize {
         address _presaleAccount,
         uint256 _fundingStartBlock,
         uint256 _fundingRoundDuration,
-        uint256 _mintingAnnounceDelay)
+        uint256 _mintingPrepareDelay,
+        uint256 _mintingCommitDelay,
+        uint256 _maxContribution)
     public
     payable 
     {
         // Make sure the production contract is initialized with the right values
         // require(_fundingRoundDuration == 10 * (24 * 60 * 4))     // 10 days with 15s block time
-        // require(_mintingAnnounceDelay == 31 * (24 * 60 * 4))     // 31 days with 15s block time
+        // require(_mintingPrepareDelay == 31 * (24 * 60 * 4))      // 31 days with 15s block time
+        // require(_mintingCommitDelay == 31 * (24 * 60 * 4))       // 31 days with 15s block time
         require(_fundingRoundDuration > 0);
-        require(_mintingAnnounceDelay > 0);
+        require(_mintingPrepareDelay > 0);
+        require(_mintingCommitDelay > 0);
+        require(_maxContribution > 0);
 
         // The start of the fundraising should happen in the future
         require(block.number < _fundingStartBlock);
-        require(_fundingRoundDuration > 0);
-        require(_mintingAnnounceDelay > 0);
 
         // Admin addresses must be set and must be different
         require(_admin1 != address(0));
@@ -393,14 +405,21 @@ contract TheMineToken is StandardToken, usingOraclize {
         state = ContractState.Fundraising;
         savedState = ContractState.Fundraising;
 
+        // Set contribution thresholds
+        minContribution = 2 * (uint(10) ** 17); // 0.2 ETH
+        maxContribution = _maxContribution;
+        // require(_maxContribution == 2 * (uint(10) ** 19));       // 20 ETH
+
         // Round duration blocks
-        fundingRoundDuration = _fundingRoundDuration;
-        mintingAnnounceDelay = _mintingAnnounceDelay;        
         fundingStartBlock = _fundingStartBlock;
+        fundingRoundDuration = _fundingRoundDuration;
         roundTwoBlock = _fundingStartBlock + fundingRoundDuration;
         roundThreeBlock = _fundingStartBlock + 2 * fundingRoundDuration;
         fundingEndBlock = _fundingStartBlock + 3 * fundingRoundDuration;
 
+        // Minting state
+        mintingPrepareDelay = _mintingPrepareDelay;
+        mintingCommitDelay = _mintingCommitDelay;
         currentMintingState = MintingState.NotStarted;
 
         // Allocate the presale tokens
@@ -418,9 +437,10 @@ contract TheMineToken is StandardToken, usingOraclize {
     }
 
     //// oraclize START
-
     // @dev oraclize is called recursively here - once a callback fetches the newest ETH price, the next callback is scheduled for the next hour again
-    function __callback(bytes32 myid, string result) {
+    function __callback(bytes32 myid, string result)
+    public
+    {
         require(msg.sender == oraclize_cbAddress());
 
         // setting the token price here
@@ -431,7 +451,10 @@ contract TheMineToken is StandardToken, usingOraclize {
         updatePrice();
     }
 
-    function updatePrice() payable {    // can be left public as a way for replenishing contract's ETH balance, just in case
+    function updatePrice()
+    public  // can be left public as a way for replenishing contract's ETH balance, just in case
+    payable 
+    {
         if (msg.sender != oraclize_cbAddress()) {
             require(msg.value >= 200 finney);
         }
@@ -489,7 +512,7 @@ contract TheMineToken is StandardToken, usingOraclize {
     {
         require(block.number >= fundingStartBlock);
         require(block.number <= fundingEndBlock);
-        require(msg.value >= MINIMUM_CONTRIBUTION);
+        require(msg.value >= minContribution);
 
         // Calculate how many tokens need to be allocated
         uint256 valueUsd = SafeMath.mul(msg.value, ETH_USD_EXCHANGE_RATE_IN_CENTS) / 100;
@@ -508,7 +531,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         if (kycVerified[msg.sender] == false) {
             // Require a maximum contribution of 20 ETH
             newBalance = SafeMath.add(noKycEthBalances[msg.sender], msg.value);
-            require(newBalance <= MAXIMUM_CONTRIBUTION);
+            require(newBalance <= maxContribution);
 
             // @dev The unKYCed eth balances are moved to main ethBalances after approveKyc()
             noKycEthBalances[msg.sender] = newBalance;
@@ -518,7 +541,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         } else {
             // Require a maximum contribution of 20 ETH
             newBalance = SafeMath.add(ethBalances[msg.sender], msg.value);
-            require(newBalance <= MAXIMUM_CONTRIBUTION);
+            require(newBalance <= maxContribution);
 
             // if buyer is already KYC approved, assign the Eth to the main pool
             ethBalances[msg.sender] = newBalance;
@@ -599,7 +622,8 @@ contract TheMineToken is StandardToken, usingOraclize {
     external
     {
         // Allow refunds only a week after end of funding to give KYC-team time to verify contributors
-        require(block.number > (fundingEndBlock + 42000));
+        // require(block.number > (fundingEndBlock + 42000));
+        require(block.number > fundingEndBlock);
 
         // No refunds if the minimum token cap has been reached
         require(totalSupply < TOKEN_CREATED_MIN);
@@ -660,11 +684,12 @@ contract TheMineToken is StandardToken, usingOraclize {
         require(block.number > fundingEndBlock || totalSupply >= TOKEN_CREATED_MIN);
         
         // make sure a recipient was defined
-        require (_safe != address(0));
+        require(_safe != address(0));
 
         // Move the contract to Finalized state
         state = ContractState.Finalized;
         savedState = ContractState.Finalized;
+        mintFinalizedBlock = block.number;
 
         // Send the KYCed ETH to where admins agree upon.
         _safe.transfer(allReceivedEth);

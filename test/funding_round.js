@@ -32,11 +32,14 @@ async function deployContract(acct) {
   
   let fundingStartBlock = lastBlock + 10;
   let fundingRoundDuration = 10;
-  let mintingAnnounceDelay = 10;
+  let mintingPrepareDelay = 10;
+  let mintingCommitDelay = 10;
+  let maxContribution = web3.toWei(200);
 
   let contract = await TheMineToken.new(
     acct.admin1, acct.admin2, acct.admin3, acct.kycValidator, acct.presaleAccount,
-    fundingStartBlock, fundingRoundDuration, mintingAnnounceDelay
+    fundingStartBlock, fundingRoundDuration, mintingPrepareDelay, mintingCommitDelay,
+    maxContribution
   );
   console.log(`address: ${contract.address} fundingStartBlock: ${fundingStartBlock}`);
   return contract;
@@ -141,6 +144,19 @@ contract('TheMineToken', async function(accounts) {
     throw new Error("created tokens after fundingEndBlock");   
   });
 
+  it("shouldn't accpet contributions under the minimum amount", async function() {
+    let contract = await deployContract(acct);
+
+    await goToFundraisingStage(contract, 2);
+
+    try {
+      await contract.createTokens({from: acct.user1, value: web3.toWei(0.1)});
+    } catch(e) {
+      return true;
+    }
+    throw new Error("accepted contributions under minimum amount");
+  });
+
   it("shouldn't allocate tokens if the contract is paused during the funding round", async function() {
     let contract = await deployContract(acct);
     
@@ -214,12 +230,132 @@ contract('TheMineToken', async function(accounts) {
     throw new Error("contract finalized under minimum cap");
   });
 
-  // it("should allow token transfers after the funding round is finalized", async function() {
-  //   let state = await contract.state();
-  //   assert.equal(state.toNumber(), 1, "couldn't finalize the funding round");
+  it("should allow token transfers after the funding round is finalized", async function() {
+    let contract = await deployContract(acct);
 
-  //   await contract.transfer(acct.user2, 1, {from: acct.user1});
-  //   balance = await contract.balanceOf(acct.user2);
-  //   assert.equal(balance.toNumber(), 1, "tokens were not transferred");
-  // });
+    // simulate crowdfunding that exceeds minimum cap
+    await goToFundraisingStage(contract, 1, 1);
+    await contract.createTokens({from: acct.user1, value: web3.toWei(100)})
+    await contract.createTokens({from: acct.user2, value: web3.toWei(100)})
+    await contract.createTokens({from: acct.user3, value: web3.toWei(100)})
+
+    let totalSupply = await contract.totalSupply();
+    let minimumCap = await contract.TOKEN_CREATED_MIN();
+    assert.isAtLeast(totalSupply.toNumber(), minimumCap.toNumber(), "couldn't create enough tokens to exceed minimum cap");
+
+    // finalize the crowdfunding round
+    await goToFundraisingStage(contract, 4, 10);
+    await contract.finalize(acct.owner, {from: acct.admin1});  
+    await contract.finalize(acct.owner, {from: acct.admin2});
+
+    let state = await contract.state();
+    assert.equal(state.toNumber(), 1, "couldn't finalize the funding round");
+
+    let oldBalance = await contract.balanceOf(acct.user2);
+    await contract.transfer(acct.user2, 1, {from: acct.user1});
+    let newBalance = await contract.balanceOf(acct.user2);
+    
+    assert.equal(newBalance.toNumber(), oldBalance.toNumber() + 1, "tokens were not transferred");
+  });
+
+  it("should refund unKYCed users if minimum cap is not reached", async function() {
+    let contract = await deployContract(acct);
+
+    // simulate crowdfunding that doesn't exceed minimum cap
+    let oldBalance = await promisify(cb => web3.eth.getBalance(acct.user1, cb));
+
+    await goToFundraisingStage(contract, 1);
+    await contract.createTokens({from: acct.user1, value: web3.toWei(10)});
+
+    let totalSupply = await contract.totalSupply();
+    let minimumCap = await contract.TOKEN_CREATED_MIN();
+    assert.isBelow(totalSupply.toNumber(), minimumCap.toNumber(), "created too many tokens and exceeded minimum cap");
+
+    // ask for a refund
+    await goToFundraisingStage(contract, 4, 1);
+    await contract.refund({from: acct.user1});
+    let newBalance = await promisify(cb => web3.eth.getBalance(acct.user1, cb));
+
+    assert.isBelow(oldBalance.toNumber() - newBalance.toNumber(), web3.toWei(0.1), "didn't process the refund");
+  });
+
+  it("should refund KYCed users if minimum cap is not reached", async function() {
+    let contract = await deployContract(acct);
+
+    // simulate crowdfunding that doesn't exceed minimum cap
+    let oldBalance = await promisify(cb => web3.eth.getBalance(acct.user2, cb));
+
+    await goToFundraisingStage(contract, 1);
+    await contract.createTokens({from: acct.user2, value: web3.toWei(10)});
+    await contract.approveKyc(acct.user2, {from: acct.kycValidator});
+
+    let totalSupply = await contract.totalSupply();
+    let minimumCap = await contract.TOKEN_CREATED_MIN();
+    assert.isBelow(totalSupply.toNumber(), minimumCap.toNumber(), "created too many tokens and exceeded minimum cap");
+
+    // ask for a refund
+    await goToFundraisingStage(contract, 4, 1);
+    await contract.refund({from: acct.user2});
+    let newBalance = await promisify(cb => web3.eth.getBalance(acct.user2, cb));
+
+    assert.isBelow(oldBalance.toNumber() - newBalance.toNumber(), web3.toWei(0.1), "didn't process the refund");
+  });
+
+  it("should refund the rejected KYC users automatically", async function() {
+    let contract = await deployContract(acct);
+
+    let oldBalance = await promisify(cb => web3.eth.getBalance(acct.user2, cb));
+    await goToFundraisingStage(contract, 1);
+    await contract.createTokens({from: acct.user2, value: web3.toWei(10)});
+    await contract.rejectKyc(acct.user2, {from: acct.kycValidator});
+    let newBalance = await promisify(cb => web3.eth.getBalance(acct.user2, cb));
+
+    assert.isBelow(
+      oldBalance.toNumber() - newBalance.toNumber(),
+      web3.toWei(0.1),
+      "didn't process the refund"
+    );
+  });
+
+  it("should allow admins to withdraw KYCed ether", async function() {
+    let contract = await deployContract(acct);
+
+    // simulate crowdfunding that exceeds minimum cap
+    await goToFundraisingStage(contract, 1, 1);
+    await contract.createTokens({from: acct.user1, value: web3.toWei(100)});
+    await contract.createTokens({from: acct.user2, value: web3.toWei(100)});
+    await contract.createTokens({from: acct.user3, value: web3.toWei(100)});
+
+    await goToFundraisingStage(contract, 2);
+    await contract.approveKyc(acct.user1, {from: acct.kycValidator});
+
+    let totalSupply = await contract.totalSupply();
+    let minimumCap = await contract.TOKEN_CREATED_MIN();
+    assert.isAtLeast(
+      totalSupply.toNumber(), 
+      minimumCap.toNumber(), 
+      "couldn't create enough tokens to exceed minimum cap"
+    );
+
+    let startBalance = await promisify(cb => web3.eth.getBalance(acct.owner, cb));
+    await contract.retrieveEth(web3.toWei(100), acct.owner, {from: acct.admin1});
+    await contract.retrieveEth(web3.toWei(100), acct.owner, {from: acct.admin2});
+    let finalBalance = await promisify(cb => web3.eth.getBalance(acct.owner, cb));
+
+    assert.equal(
+      web3.fromWei(finalBalance.toNumber()) - web3.fromWei(startBalance.toNumber()),
+      100,
+      "could not retrieve KYCed ethers"
+    );
+
+    try {
+      await contract.retrieveEth(web3.toWei(100), acct.owner, {from: acct.admin1});
+      await contract.retrieveEth(web3.toWei(100), acct.owner, {from: acct.admin2});
+    } catch(e) {
+      return true;
+    }
+
+    throw new Error("allowed withdrawals of unKYCed ethers");
+  });
+
 });
