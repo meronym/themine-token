@@ -32,11 +32,11 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public fundingEndBlock;   // block number that guards for the time constraint
 
     // Per account limits
-    uint256 public minContribution = 2 * (uint(10) ** 17);        // 0.2 ETH
-    uint256 public maxContribution = 2 * (uint(10) ** 19);        // 20 ETH
+    uint256 public minContribution = 2 * (uint(10) ** 17);   // 0.2 ETH
+    uint256 public maxContribution;                          // provided at contract creation
 
-    // Current ETH/USD exchange rate
-    uint256 public ETH_USD_EXCHANGE_RATE_IN_CENTS; // to be set by oraclize
+    // Current ETH/USD exchange rate, to be updated by Oraclize every 6 hours
+    uint256 public ETH_USD_EXCHANGE_RATE_IN_CENTS;
 
     // Everything oraclize related
     event updatedPrice(string price);
@@ -45,7 +45,7 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // ETH balance per user
     // Since we have different exchange rates at different stages, we need to keep track
-    // of how much ether each contributed in case that we need to issue a refund
+    // of how much ether each address contributed in case that we need to issue a refund
     mapping (address => uint256) private ethBalances;
     mapping (address => uint256) private noKycEthBalances;
 
@@ -110,9 +110,9 @@ contract TheMineToken is StandardToken, usingOraclize {
     }
 
     function updateKycValidator(address _newKycValidator)
-    external
-    onlyOwner
-    returns (bool success)
+        external
+        onlyOwner
+        returns (bool success)
     {
         kycValidator = _newKycValidator;
         return true;
@@ -156,9 +156,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     /// @dev Pauses the contract
     function pause()
-    external
-    notPaused   // Prevent the contract getting stuck in the Paused state
-    onlyOwner   // Only both admins calling this method can pause the contract
+        external
+        notPaused   // Prevent the contract getting stuck in the Paused state
+        onlyOwner   // Only both admins calling this method can pause the contract
     {
         // Move the contract to Paused state
         savedState = state;
@@ -167,9 +167,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     /// @dev Proceeds with the contract
     function proceed()
-    external
-    isPaused
-    onlyOwner   // Only both admins calling this method can resume the contract
+        external
+        isPaused
+        onlyOwner   // Only both admins calling this method can resume the contract
     {
         // Move the contract to the state it was before we paused it
         state = savedState;
@@ -212,10 +212,10 @@ contract TheMineToken is StandardToken, usingOraclize {
     uint256 public mintFinalizedBlock;
 
     function mintPrepare(address _to, uint256 _value)
-    external
-    isFinalized  // Minting can only work after the first ICO is finalized
-    onlyOwner
-    returns (bool success)
+        external
+        isFinalized  // Minting can only work after the first ICO is finalized
+        onlyOwner
+        returns (bool success)
     {
         require(currentMintingState == MintingState.NotStarted);
         require(mintFinalizedBlock + mintingPrepareDelay < block.number);
@@ -230,10 +230,10 @@ contract TheMineToken is StandardToken, usingOraclize {
     }
 
     function mintCancel()
-    external
-    isFinalized  // Minting can only work after the first ICO is finalized
-    onlyOwner
-    returns (bool success)
+        external
+        isFinalized  // Minting can only work after the first ICO is finalized
+        onlyOwner
+        returns (bool success)
     {
         require(currentMintingState == MintingState.Prepared);
         mintAddress = address(0);
@@ -244,10 +244,10 @@ contract TheMineToken is StandardToken, usingOraclize {
     }
 
     function mintCommit()
-    external
-    isFinalized  // Minting can only work after the first ICO is finalized
-    onlyOwner
-    returns (bool success)
+        external
+        isFinalized  // Minting can only work after the first ICO is finalized
+        onlyOwner
+        returns (bool success)
     {
         // Check if a previous mintPrepare() is active
         require(currentMintingState == MintingState.Prepared);
@@ -270,10 +270,10 @@ contract TheMineToken is StandardToken, usingOraclize {
     }
 
     function mintFinalize()
-    external
-    isFinalized  // Minting can only work after the first ICO is finalized
-    onlyOwner
-    returns (bool success)
+        external
+        isFinalized  // Minting can only work after the first ICO is finalized
+        onlyOwner
+        returns (bool success)
     {
         require(currentMintingState == MintingState.Committed);
         totalSupply = SafeMath.sub(totalSupply, balances[mintAddress]);
@@ -298,25 +298,25 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Allows to figure out the amount of known token holders
     function getHolderCount()
-    public
-    constant
-    returns (uint256 _holderCount)
+        public
+        constant
+        returns (uint256 _holderCount)
     {
         return holders.length;
     }
 
     // Allows for easier retrieval of holder by array index
     function getHolder(uint256 _index)
-    public
-    constant
-    returns (address _holder)
+        public
+        constant
+        returns (address _holder)
     {
         return holders[_index];
     }
 
     function trackHolder(address _to)
-    private
-    returns (bool success)
+        private
+        returns (bool success)
     {
         // Check if the recipient is a known token holder
         if (isHolder[_to] == false) {
@@ -329,9 +329,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Overridden method to check for state conditions before allowing transfer of tokens
     function transfer(address _to, uint256 _value)
-    public
-    transfersAllowed(msg.sender)
-    returns (bool success)
+        public
+        transfersAllowed(msg.sender)
+        returns (bool success)
     {
         bool result = super.transfer(_to, _value);
         if (result) {
@@ -342,9 +342,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Overridden method to check for state conditions before allowing transfer of tokens
     function transferFrom(address _from, address _to, uint256 _value)
-    public
-    transfersAllowed(msg.sender)
-    returns (bool success)
+        public
+        transfersAllowed(msg.sender)
+        returns (bool success)
     {
         bool result = super.transferFrom(_from, _to, _value);
         if (result) {
@@ -364,9 +364,10 @@ contract TheMineToken is StandardToken, usingOraclize {
         uint256 _fundingRoundDuration,
         uint256 _mintingPrepareDelay,
         uint256 _mintingCommitDelay,
-        uint256 _maxContribution)
-    public
-    payable 
+        uint256 _maxContribution
+    )
+        public
+        payable 
     {
         // Make sure the production contract is initialized with the right values
         // require(_fundingRoundDuration == 10 * (24 * 60 * 4))     // 10 days with 15s block time
@@ -407,8 +408,8 @@ contract TheMineToken is StandardToken, usingOraclize {
 
         // Set contribution thresholds
         minContribution = 2 * (uint(10) ** 17); // 0.2 ETH
-        maxContribution = _maxContribution;
         // require(_maxContribution == 2 * (uint(10) ** 19));       // 20 ETH
+        maxContribution = _maxContribution;
 
         // Round duration blocks
         fundingStartBlock = _fundingStartBlock;
@@ -439,7 +440,7 @@ contract TheMineToken is StandardToken, usingOraclize {
     //// oraclize START
     // @dev oraclize is called recursively here - once a callback fetches the newest ETH price, the next callback is scheduled for the next hour again
     function __callback(bytes32 myid, string result)
-    public
+        public
     {
         require(msg.sender == oraclize_cbAddress());
 
@@ -452,8 +453,8 @@ contract TheMineToken is StandardToken, usingOraclize {
     }
 
     function updatePrice()
-    public  // can be left public as a way for replenishing contract's ETH balance, just in case
-    payable 
+        public  // can be left public as a way for replenishing contract's ETH balance, just in case
+        payable 
     {
         if (msg.sender != oraclize_cbAddress()) {
             require(msg.value >= 200 finney);
@@ -470,9 +471,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Update the fundraising start date
     function updateFundingStart(uint256 _fundingStartBlock)
-    external
-    isFundraisingIgnorePaused  
-    onlyOwner
+        external
+        isFundraisingIgnorePaused  
+        onlyOwner
     {
         // Can only change the funding start block if the funding had not started yet
         require(fundingStartBlock > block.number);
@@ -487,9 +488,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Returns the current token price
     function getCurrentBonusRate()
-    private
-    constant
-    returns (uint256 currentBonusRate)
+        private
+        constant
+        returns (uint256 currentBonusRate)
     {
         // determine which bonus to apply
         if (block.number < roundTwoBlock) {
@@ -506,9 +507,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Accepts ether and creates new MINE tokens
     function createTokens()
-    payable
-    external
-    isFundraising
+        external
+        payable
+        isFundraising
     {
         require(block.number >= fundingStartBlock);
         require(block.number <= fundingEndBlock);
@@ -529,21 +530,21 @@ contract TheMineToken is StandardToken, usingOraclize {
         // Only when all the checks have passed, we check if the address is already KYCEd and then 
         // update the state (noKycEthBalances, allReceivedEth, totalSupply, and balances) of the contract
         if (kycVerified[msg.sender] == false) {
-            // Require a maximum contribution of 20 ETH
+            // Check for a maximum contribution of 20 ETH
             newBalance = SafeMath.add(noKycEthBalances[msg.sender], msg.value);
             require(newBalance <= maxContribution);
 
             // @dev The unKYCed eth balances are moved to main ethBalances after approveKyc()
             noKycEthBalances[msg.sender] = newBalance;
 
-            // add the contributed eth to the total unKYCed eth amount
+            // Add the contributed eth to the total unKYCed eth amount
             allUnKycedEth = SafeMath.add(allUnKycedEth, msg.value);
         } else {
-            // Require a maximum contribution of 20 ETH
+            // Check for a maximum contribution of 20 ETH
             newBalance = SafeMath.add(ethBalances[msg.sender], msg.value);
             require(newBalance <= maxContribution);
 
-            // if buyer is already KYC approved, assign the Eth to the main pool
+            // If buyer is already KYC approved, assign the Eth to the main pool
             ethBalances[msg.sender] = newBalance;
             allReceivedEth = SafeMath.add(allReceivedEth, msg.value);
         }
@@ -551,6 +552,7 @@ contract TheMineToken is StandardToken, usingOraclize {
         totalSupply = checkedSupply;
         balances[msg.sender] += tokens;  // safeAdd not needed
 
+        // Track token holder for future use cases (reward distribution)
         trackHolder(msg.sender);
 
         // Log the creation of these tokens
@@ -559,17 +561,17 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Approve KYC of a user and track his contributions
     function approveKyc(address _owner)
-    external
-    onlyKycValidator
+        external
+        onlyKycValidator
     {
         require(kycVerified[_owner] == false);
 
         // unlock the owner to allow transfer of tokens
         kycVerified[_owner] = true;
 
-        // check if the user was an Eth buyer
+        // check if the user has active unKYCed ethers
         if (noKycEthBalances[_owner] > 0) {
-            // now move the unKYCed Eth balance to the regular ethBalance. 
+            // now move the unKYCed Eth balance to the regular ethBalance
             ethBalances[_owner] = noKycEthBalances[_owner];
 
             // add the now KYCed Eth to the total received Eth
@@ -585,8 +587,8 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Reject KYC of a user and refund his contributions
     function rejectKyc(address _user)
-    external
-    onlyKycValidator
+        external
+        onlyKycValidator
     {
         // once a user is verified, we can't kick him out
         require(kycVerified[_user] == false);
@@ -619,7 +621,7 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Allows contributors to recover their ether in case the minimum funding goal is not reached
     function refund()
-    external
+        external
     {
         // Allow refunds only a week after end of funding to give KYC-team time to verify contributors
         // require(block.number > (fundingEndBlock + 42000));
@@ -659,9 +661,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     /// Allows to transfer ether from the contract as soon as the minimum is reached
     function retrieveEth(uint256 _value, address _safe)
-    external
-    minimumReached
-    onlyOwner
+        external
+        minimumReached
+        onlyOwner
     {
         // make sure unKYCed eth cannot be withdrawn
         require(SafeMath.sub(this.balance, _value) >= allUnKycedEth);
@@ -675,10 +677,10 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     /// Ends the fundraising period and sends the ETH to wherever the admins agree upon
     function finalize(address _safe)
-    external
-    isFundraising
-    minimumReached
-    onlyOwner  // Only the admins calling this method exactly the same way can finalize the sale.
+        external
+        isFundraising
+        minimumReached
+        onlyOwner  // Only the admins calling this method exactly the same way can finalize the sale.
     {
         // Only allow to finalize the contract before the ending block if we already reached the minimum cap
         require(block.number > fundingEndBlock || totalSupply >= TOKEN_CREATED_MIN);
@@ -697,17 +699,17 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // Deliver tokens to be distributed to team members
     function deliverTeamTokens(address _to)
-    external
-    isFinalized
-    onlyOwner
+        external
+        isFinalized
+        onlyOwner
     {
         require(teamTokensDelivered == false);
         require(_to != address(0));
 
-        // Company, advisors and supporters get 12% of a whole final pie
-        // (100 - 12) * x = 100, where 12 is the team's final allocation and x amounts to roughly about 1.13636
-        // thus we need to increase the current totalSupply with ~13.6%
-        uint256 newTotalSupply = SafeMath.mul(totalSupply, 113636) / 100000;
+        // Company, advisors and supporters get 13% of a whole final pie
+        // (100 - 13) * x = 100, where 13 is the team's final allocation and x amounts to roughly about 1.14942
+        // thus we need to increase the current totalSupply with ~14.9%
+        uint256 newTotalSupply = SafeMath.mul(totalSupply, 114942) / 100000;
 
         // give company and supporters their 12% 
         uint256 tokens = SafeMath.sub(newTotalSupply, totalSupply);
@@ -725,10 +727,9 @@ contract TheMineToken is StandardToken, usingOraclize {
 
     // @dev for test purposes only
     function ping()
-    external
-    returns (bool success)
+        external
+        returns (bool success)
     {
         return true;
     }
-
 }
