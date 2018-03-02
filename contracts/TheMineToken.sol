@@ -706,23 +706,33 @@ contract TheMineToken is StandardToken, usingOraclize {
         require(teamTokensDelivered == false);
         require(_to != address(0));
 
-        // Company, advisors and supporters get 13% of a whole final pie
+        // Company, team, advisors and supporters get 13% of a whole final pie
         // (100 - 13) * x = 100, where 13 is the team's final allocation and x amounts to roughly about 1.14942
         // thus we need to increase the current totalSupply with ~14.9%
         uint256 newTotalSupply = SafeMath.mul(totalSupply, 114942) / 100000;
+        uint256 newTokens = SafeMath.sub(newTotalSupply, totalSupply);
 
-        // give company and supporters their 12% 
-        uint256 tokens = SafeMath.sub(newTotalSupply, totalSupply);
-        balances[_to] = tokens;
+        // Give bounty manager 2/13 of the allocation
+        // FIXME Replace with the real bounty manager address
+        address bountyManager = address(0x68dd77f8d88236cb47e0956467e053a3d21503cb);
+        uint256 bountyTokens = SafeMath.mul(newTokens, 2) / 13;
+        balances[bountyManager] = bountyTokens;
+        
+        // Give company, team and advisors the remaining 11/13 from the allocation
+        uint256 teamTokens = SafeMath.sub(newTokens, bountyTokens);
+        balances[_to] = teamTokens;
 
-        //update state
+        // Update state
         teamTokensDelivered = true;
         totalSupply = newTotalSupply;
 
+        // Track the recipient addresses
+        trackHolder(bountyManager);
         trackHolder(_to);
 
         // Log the creation of these tokens
-        LogTeamTokensDelivered(_to, tokens);
+        LogTeamTokensDelivered(bountyManager, bountyTokens);
+        LogTeamTokensDelivered(_to, teamTokens);
     }
 
     // @dev for test purposes only

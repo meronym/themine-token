@@ -1,6 +1,6 @@
 contractData = {
-    "address": "0x34d32077ca527036afb8cd118632cbc04d6a612f",
-    "abi": [
+  "address": "0x51cc2d599d01facd8906a308b746cc403cfb31fe",
+  "abi": [
     {
       "constant": false,
       "inputs": [
@@ -155,6 +155,20 @@ contractData = {
       "type": "function"
     },
     {
+      "constant": true,
+      "inputs": [],
+      "name": "mintFinalizedBlock",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
       "constant": false,
       "inputs": [
         {
@@ -179,20 +193,6 @@ contractData = {
       ],
       "payable": false,
       "stateMutability": "nonpayable",
-      "type": "function"
-    },
-    {
-      "constant": true,
-      "inputs": [],
-      "name": "FUNDING_ROUND_DURATION_BLOCKS",
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -322,11 +322,39 @@ contractData = {
     {
       "constant": true,
       "inputs": [],
+      "name": "mintPreparedBlock",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
       "name": "mintAddress",
       "outputs": [
         {
           "name": "",
           "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "mintingPrepareDelay",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
         }
       ],
       "payable": false,
@@ -355,20 +383,6 @@ contractData = {
         {
           "name": "",
           "type": "string"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "constant": true,
-      "inputs": [],
-      "name": "mintPrepareBlock",
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256"
         }
       ],
       "payable": false,
@@ -405,6 +419,34 @@ contractData = {
       "outputs": [],
       "payable": false,
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [],
+      "name": "ping",
+      "outputs": [
+        {
+          "name": "success",
+          "type": "bool"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "fundingRoundDuration",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -550,6 +592,20 @@ contractData = {
     {
       "constant": true,
       "inputs": [],
+      "name": "maxContribution",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
       "name": "fundingEndBlock",
       "outputs": [
         {
@@ -615,6 +671,20 @@ contractData = {
       ],
       "payable": false,
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "minContribution",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -754,20 +824,6 @@ contractData = {
     },
     {
       "constant": true,
-      "inputs": [],
-      "name": "MINT_COMMIT_BLOCK_DELAY",
-      "outputs": [
-        {
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "payable": false,
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "constant": true,
       "inputs": [
         {
           "name": "",
@@ -886,6 +942,20 @@ contractData = {
     {
       "constant": true,
       "inputs": [],
+      "name": "mintingCommitDelay",
+      "outputs": [
+        {
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
       "name": "roundThreeBlock",
       "outputs": [
         {
@@ -944,12 +1014,28 @@ contractData = {
           "type": "address"
         },
         {
+          "name": "_presaleAccount",
+          "type": "address"
+        },
+        {
           "name": "_fundingStartBlock",
           "type": "uint256"
         },
         {
-          "name": "_presaleAccount",
-          "type": "address"
+          "name": "_fundingRoundDuration",
+          "type": "uint256"
+        },
+        {
+          "name": "_mintingPrepareDelay",
+          "type": "uint256"
+        },
+        {
+          "name": "_mintingCommitDelay",
+          "type": "uint256"
+        },
+        {
+          "name": "_maxContribution",
+          "type": "uint256"
         }
       ],
       "payable": true,

@@ -29,8 +29,31 @@
                     </tr>
                 </tbody>
             </table>
+
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Duration</th>
+                        <th>Start</th>
+                        <th>R2</th>
+                        <th>R3</th>
+                        <th>End</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>{{ fundingRoundDuration }}</td>
+                        <td>{{ fundingStartBlock }}</td>
+                        <td>{{ roundTwoBlock }}</td>
+                        <td>{{ roundThreeBlock }}</td>
+                        <td>{{ fundingEndBlock }}</td>
+                    </tr>
+                </tbody>
+            </table>
+
         </div>
 
+        <div id="alerts"></div>
 
         <ul class="nav nav-tabs" role="tablist">
           <li class="nav-item">
@@ -52,10 +75,6 @@
                     <div id="tpl-state" class="col">
                         <table class="table">
                             <tbody>
-                                <tr>
-                                    <td>Funding Blocks</td>
-                                    <td>{{ fundingStartBlock }} / {{ roundTwoBlock }} / {{ roundThreeBlock }} / {{ fundingEndBlock }}</td>
-                                </tr>
                                 <tr><td>state</td><td>{{ state }}</td></tr>
                                 <tr><td>totalSupply</td><td>{{ totalSupply }}</td></tr>
                                 <tr><td>ETH rcv/unKYC</td><td>{{ allReceivedEth }} / {{ allUnKycedEth }}</td></tr>
@@ -143,8 +162,6 @@
 
         </div>  <!-- tab-content -->
 
-        <div id="alerts"></div>
-
     </div>  <!-- container -->
 
     <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js" integrity="sha384-KJ3o2DKtIkvYIK3UENzmM7KCkRr/rE9/Qpg6aAZGJwFDMVNA/GpGFF93hXpG5KkN" crossorigin="anonymous"></script>
@@ -190,6 +207,7 @@
                 totalSupply: web3.fromWei(contract.totalSupply.call(), 'ether'),
                 allReceivedEth: web3.fromWei(contract.allReceivedEth.call(), 'ether'),
                 allUnKycedEth: web3.fromWei(contract.allUnKycedEth.call(), 'ether'),
+                fundingRoundDuration: contract.fundingRoundDuration.call(),
                 fundingStartBlock: contract.fundingStartBlock.call(),
                 fundingEndBlock: contract.fundingEndBlock.call(),
                 roundTwoBlock: contract.roundTwoBlock.call(),
@@ -197,7 +215,7 @@
                 currentMintingState: ['NotStarted', 'Prepared', 'Committed'][contract.currentMintingState.call()],
                 mintAddress: contract.mintAddress.call(),
                 mintValue: contract.mintValue.call(),
-                mintPrepareBlock: contract.mintPrepareBlock.call(),
+                mintPrepareBlock: contract.mintPreparedBlock.call(),
                 accounts: accounts,
             }
         }
@@ -216,8 +234,8 @@
         // poke the blockchain with a dummy transaction to generate a new block
         $("#btn-new-block").click(e => {
             web3.eth.sendTransaction({
-                from: '0x630648F88C633Dd73733173DD4d78330b3e25F58',
-                to: '0x819fd11de73132e35ed21ded28948a6112447fd4',
+                from: web3.eth.accounts[0],
+                to: web3.eth.accounts[1],
                 value: 1
             }, function(error, resp) {
                 console.log(error, resp);
