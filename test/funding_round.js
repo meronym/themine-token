@@ -41,7 +41,7 @@ async function deployContract(acct) {
     fundingStartBlock, fundingRoundDuration, mintingPrepareDelay, mintingCommitDelay,
     maxContribution
   );
-  console.log(`address: ${contract.address} fundingStartBlock: ${fundingStartBlock}`);
+  // console.log(`address: ${contract.address} fundingStartBlock: ${fundingStartBlock}`);
   return contract;
 }
 
@@ -95,7 +95,7 @@ async function goToFundraisingStage(contract, stage, offset=0) {
     throw new Error('invalid stage specified');
   }
   goToBlock = goToBlock.toNumber() + offset;
-  console.log(`moving to stage ${stage} at block #${goToBlock}`);
+  // console.log(`moving to stage ${stage} at block #${goToBlock}`);
   await fastForward(goToBlock, contract);
 
   let currentBlock = await getCurrentBlock();
